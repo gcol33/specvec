@@ -4,10 +4,10 @@
 \alias{nearest_species}
 \title{Nearest species}
 \usage{
-nearest_species(emb, species, n = 10L, metric = c("cosine", "euclidean"))
+nearest_species(x, species, n = 10L, metric = c("cosine", "euclidean"))
 }
 \arguments{
-\item{emb}{A \code{specvec_embedding}.}
+\item{x}{A \code{specvec_embedding}.}
 
 \item{species}{Focal species id (a row name of the embedding).}
 

@@ -69,18 +69,18 @@ community_embedding <- function(x, method = "abund_pmi", dim = 64L,
 #'
 #' Pairwise similarity among plot embeddings, or of each plot to a reference set.
 #'
-#' @param object A `specvec_community`.
+#' @param x A `specvec_community`.
 #' @param reference Optional `specvec_community` or matrix to compare against;
 #'   if `NULL`, compares the object's plots to themselves.
 #' @param metric `"cosine"` (default) returns a similarity matrix; `"euclidean"`
 #'   returns a distance matrix.
-#' @return A matrix of `object` rows by `reference` rows.
+#' @return A matrix of `x` rows by `reference` rows.
 #' @export
-community_similarity <- function(object, reference = NULL,
+community_similarity <- function(x, reference = NULL,
                                  metric = c("cosine", "euclidean")) {
-  if (!inherits(object, "specvec_community")) stop("`object` must be a specvec_community.", call. = FALSE)
+  if (!inherits(x, "specvec_community")) stop("`x` must be a specvec_community.", call. = FALSE)
   metric <- match.arg(metric)
-  U <- object$U
+  U <- x$U
   R <- if (is.null(reference)) U else .community_matrix(reference, "reference")
   S <- if (metric == "cosine") .cosine_sim(U, R) else .pairwise_euclid(U, R)
   rownames(S) <- rownames(U); colnames(S) <- rownames(R)
@@ -92,13 +92,13 @@ community_similarity <- function(object, reference = NULL,
 #' Per-plot novelty: the mean distance to the `k` nearest reference communities.
 #' A plot far from everything in the reference set scores high.
 #'
-#' @param object A `specvec_community` (the plots to score).
+#' @param x A `specvec_community` (the plots to score).
 #' @param reference A `specvec_community` or matrix of reference communities.
 #' @param k Number of nearest reference communities to average over.
 #' @return A named numeric vector of novelty per plot.
 #' @export
-community_novelty <- function(object, reference, k = 5L) {
-  Q <- .community_matrix(object, "object")
+community_novelty <- function(x, reference, k = 5L) {
+  Q <- .community_matrix(x, "x")
   R <- .community_matrix(reference, "reference")
   k <- min(as.integer(k), nrow(R))
   if (k < 1L) stop("reference has no communities.", call. = FALSE)

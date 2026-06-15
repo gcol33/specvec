@@ -3,7 +3,7 @@
 #' Rank the species closest to a focal species in the embedding. The sticky
 #' demo function: ask which species an embedding places next to Robinia.
 #'
-#' @param emb A `specvec_embedding`.
+#' @param x A `specvec_embedding`.
 #' @param species Focal species id (a row name of the embedding).
 #' @param n Number of neighbours to return.
 #' @param metric `"cosine"` (default) or `"euclidean"`.
@@ -16,10 +16,10 @@
 #' emb <- species_embedding(specvec(df, "plot", "species"),
 #'                          method = "pmi", dim = 3, min_occurrence = 1)
 #' nearest_species(emb, "A", n = 2)
-nearest_species <- function(emb, species, n = 10L, metric = c("cosine", "euclidean")) {
-  if (!inherits(emb, "specvec_embedding")) stop("`emb` must be a specvec_embedding.", call. = FALSE)
+nearest_species <- function(x, species, n = 10L, metric = c("cosine", "euclidean")) {
+  if (!inherits(x, "specvec_embedding")) stop("`x` must be a specvec_embedding.", call. = FALSE)
   metric <- match.arg(metric)
-  V <- emb$V
+  V <- x$V
   i <- match(species, rownames(V))
   if (is.na(i)) stop(sprintf("species '%s' not in embedding.", species), call. = FALSE)
   n <- min(as.integer(n), nrow(V) - 1L)
@@ -44,21 +44,21 @@ nearest_species <- function(emb, species, n = 10L, metric = c("cosine", "euclide
 #'
 #' Similarity of one species to another, or to all species.
 #'
-#' @param emb A `specvec_embedding`.
-#' @param a Focal species id.
-#' @param b Optional second species id; if `NULL`, returns the named similarity
-#'   (cosine) or distance (euclidean) of `a` to every species.
+#' @param x A `specvec_embedding`.
+#' @param species Focal species id.
+#' @param to Optional second species id; if `NULL`, returns the named similarity
+#'   (cosine) or distance (euclidean) of `species` to every species.
 #' @param metric `"cosine"` (default) or `"euclidean"`.
-#' @return A scalar when `b` is supplied, otherwise a named numeric vector.
+#' @return A scalar when `to` is supplied, otherwise a named numeric vector.
 #' @export
-species_similarity <- function(emb, a, b = NULL, metric = c("cosine", "euclidean")) {
-  if (!inherits(emb, "specvec_embedding")) stop("`emb` must be a specvec_embedding.", call. = FALSE)
+species_similarity <- function(x, species, to = NULL, metric = c("cosine", "euclidean")) {
+  if (!inherits(x, "specvec_embedding")) stop("`x` must be a specvec_embedding.", call. = FALSE)
   metric <- match.arg(metric)
-  V <- emb$V
-  i <- match(a, rownames(V))
-  if (is.na(i)) stop(sprintf("species '%s' not in embedding.", a), call. = FALSE)
+  V <- x$V
+  i <- match(species, rownames(V))
+  if (is.na(i)) stop(sprintf("species '%s' not in embedding.", species), call. = FALSE)
 
-  if (is.null(b)) {
+  if (is.null(to)) {
     if (metric == "cosine") {
       Vn <- .l2_normalize_rows(V)
       out <- as.numeric(Vn %*% Vn[i, ])
@@ -68,8 +68,8 @@ species_similarity <- function(emb, a, b = NULL, metric = c("cosine", "euclidean
     names(out) <- rownames(V)
     return(out)
   }
-  j <- match(b, rownames(V))
-  if (is.na(j)) stop(sprintf("species '%s' not in embedding.", b), call. = FALSE)
+  j <- match(to, rownames(V))
+  if (is.na(j)) stop(sprintf("species '%s' not in embedding.", to), call. = FALSE)
   if (metric == "cosine") {
     sum(V[i, ] * V[j, ]) / sqrt(sum(V[i, ]^2) * sum(V[j, ]^2))
   } else {

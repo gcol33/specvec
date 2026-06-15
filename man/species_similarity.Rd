@@ -4,20 +4,20 @@
 \alias{species_similarity}
 \title{Species similarity}
 \usage{
-species_similarity(emb, a, b = NULL, metric = c("cosine", "euclidean"))
+species_similarity(x, species, to = NULL, metric = c("cosine", "euclidean"))
 }
 \arguments{
-\item{emb}{A \code{specvec_embedding}.}
+\item{x}{A \code{specvec_embedding}.}
 
-\item{a}{Focal species id.}
+\item{species}{Focal species id.}
 
-\item{b}{Optional second species id; if \code{NULL}, returns the named similarity
-(cosine) or distance (euclidean) of \code{a} to every species.}
+\item{to}{Optional second species id; if \code{NULL}, returns the named similarity
+(cosine) or distance (euclidean) of \code{species} to every species.}
 
 \item{metric}{\code{"cosine"} (default) or \code{"euclidean"}.}
 }
 \value{
-A scalar when \code{b} is supplied, otherwise a named numeric vector.
+A scalar when \code{to} is supplied, otherwise a named numeric vector.
 }
 \description{
 Similarity of one species to another, or to all species.

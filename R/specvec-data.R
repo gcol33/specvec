@@ -108,15 +108,3 @@ specvec <- function(data, plot, species, abundance = NULL, time = NULL,
                 n_obs = length(pv), n_duplicates = n_dups, has_abundance = has_ab)
   ), class = "specvec_data")
 }
-
-#' @rdname specvec
-#' @export
-as_specvec <- function(data, plot, species, abundance = NULL, time = NULL,
-                       labels = NULL,
-                       cover_scale = c("percent", "proportion", "braun_blanquet"),
-                       duplicates = c("max", "sum", "first", "error"),
-                       cover_mapping = NULL) {
-  specvec(data, plot = plot, species = species, abundance = abundance, time = time,
-          labels = labels, cover_scale = cover_scale, duplicates = duplicates,
-          cover_mapping = cover_mapping)
-}

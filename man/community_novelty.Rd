@@ -4,10 +4,10 @@
 \alias{community_novelty}
 \title{Community novelty}
 \usage{
-community_novelty(object, reference, k = 5L)
+community_novelty(x, reference, k = 5L)
 }
 \arguments{
-\item{object}{A \code{specvec_community} (the plots to score).}
+\item{x}{A \code{specvec_community} (the plots to score).}
 
 \item{reference}{A \code{specvec_community} or matrix of reference communities.}
 

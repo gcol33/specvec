@@ -70,9 +70,7 @@ the columns carry whatever names the source gave them, `PlotObservationID` and
 `taxon` as readily as `plot` and `species`. The abundance column is optional:
 without it, SpecVec builds presence only and the methods that need cover fall
 back to presence. The `time` and `labels` arguments are optional too, covered
-further down. `as_specvec()` is an identical alias of `specvec()` for code that
-reads better with the verb in that form, with the same arguments and the same
-return. A `specvec_data` object prints a short summary of its plots, species,
+further down. A `specvec_data` object prints a short summary of its plots, species,
 and settings, and the sections below open it up.
 
 ## What specvec() builds

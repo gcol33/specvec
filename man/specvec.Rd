@@ -2,22 +2,9 @@
 % Please edit documentation in R/specvec-data.R
 \name{specvec}
 \alias{specvec}
-\alias{as_specvec}
 \title{Build a specvec data object}
 \usage{
 specvec(
-  data,
-  plot,
-  species,
-  abundance = NULL,
-  time = NULL,
-  labels = NULL,
-  cover_scale = c("percent", "proportion", "braun_blanquet"),
-  duplicates = c("max", "sum", "first", "error"),
-  cover_mapping = NULL
-)
-
-as_specvec(
   data,
   plot,
   species,

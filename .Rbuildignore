@@ -6,6 +6,7 @@
 ^pkgdown$
 ^\.github$
 ^IMPLEMENTATION_PLAN\.md$
+^CLAUDE\.md$
 ^LICENSE\.md$
 ^\.git$
 ^\.Rproj\.user$

@@ -4,14 +4,10 @@
 \alias{community_similarity}
 \title{Community similarity}
 \usage{
-community_similarity(
-  object,
-  reference = NULL,
-  metric = c("cosine", "euclidean")
-)
+community_similarity(x, reference = NULL, metric = c("cosine", "euclidean"))
 }
 \arguments{
-\item{object}{A \code{specvec_community}.}
+\item{x}{A \code{specvec_community}.}
 
 \item{reference}{Optional \code{specvec_community} or matrix to compare against;
 if \code{NULL}, compares the object's plots to themselves.}
@@ -20,7 +16,7 @@ if \code{NULL}, compares the object's plots to themselves.}
 returns a distance matrix.}
 }
 \value{
-A matrix of \code{object} rows by \code{reference} rows.
+A matrix of \code{x} rows by \code{reference} rows.
 }
 \description{
 Pairwise similarity among plot embeddings, or of each plot to a reference set.
