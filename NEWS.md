@@ -1,10 +1,14 @@
 # specvec 0.3.0
 
-Alien integration: measure how a neophyte settles into the native community over time.
+Alien integration, and a compositional method for the abundance fork.
 
 ## Integration trajectories
 
-* `integration_trajectory()` reports a focal neophyte's distance to the native-community centroid per time window, in one fixed embedding frame. The neophyte is placed by `species_trajectory()` at the cover-weighted centroid of the species it co-occurs with; the native community is placed by pooling its plots in the same frame; the readout is the distance between them. A falling distance is integration. `native =` names the target community (defaults to the resident pool); `frame =` fixes the coordinate system so the pole the neophyte arrives from stays represented. Restrict the input to resampled (ReSurvey) plots before building the object so the same locations are tracked through time.
+* `integration_trajectory()` reports a focal neophyte's distance to the native-community centroid per time window, in one fixed embedding frame. The neophyte is placed by `species_trajectory()` at the cover-weighted centroid of the species it co-occurs with; the native community is placed by pooling its plots in the same frame; the readout is the distance between them. A falling distance is integration. `native =` names the target community (defaults to the resident pool); `frame =` fixes the coordinate system so the pole the neophyte arrives from stays represented. Restrict the input to resampled (ReSurvey) plots before building the object so the same locations are tracked through time. See `vignette("specvec-integration")`.
+
+## Compositional method
+
+* `clr` adds the compositional route to abundance (the research fork of the methods grid): each plot is a composition, and the species operator is the centered-log-ratio covariance estimated from the variation matrix of pairwise log-ratios, double-centered. It registers through the same `(weighting, factorization)` machinery as the other methods. On the neutral co-occurrence metrics the cover-weighted PMI operand (`abund_pmi`) recovers more held-out signal, so it stays the default; `clr` is available for users who want the compositional treatment. `vignette("specvec-methods")` describes it.
 
 # specvec 0.2.0
 

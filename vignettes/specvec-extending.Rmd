@@ -18,10 +18,13 @@ library(specvec)
 The methods that ship with SpecVec are points on a grid, and the grid is open.
 A new weighting, a new factorization, or a new ordinal cover scale enters by
 registration, and from that moment it behaves like a built-in. This vignette
-adds three things that run: a van der Maarel cover scale, a Jaccard association
-weighting with its method, and a deliberate capability mismatch that the engine
-rejects. The companion `vignette("specvec-methods")` covers the built-in
-operators those examples build on.
+adds four things that run: a van der Maarel cover scale, a Jaccard association
+weighting with its method, a diffusion-map factorization that reads vectors out
+of the symmetric operator a different way, and a deliberate capability mismatch
+that the engine rejects. The first two add operands; the third adds a readout
+over operands the package already builds, which is the other axis of the grid.
+The companion `vignette("specvec-methods")` covers the built-in operators those
+examples build on.
 
 ## The registry model
 
@@ -328,17 +331,159 @@ does not bless, and the check is what tells them, immediately, whether the
 operand a weighting produces is the operand a factorization reads. A new
 factorization that consumes `"sym"` would compose with `jaccard`, `pmi`, and
 `abund_pmi` the moment it registered, with no change to any of them, because the
-kind is the only thing the pairing depends on.
+kind is the only thing the pairing depends on. The next section makes that
+claim concrete by writing one.
+
+## Worked example C: a new factorization
+
+The first two examples added new operands. A factorization is the other half of
+the grid: the operand stays the same, and what changes is how vectors are read
+out of it. The built-in `eigen` takes the symmetric PPMI matrix and returns its
+leading eigenvectors scaled by the square roots of the positive eigenvalues.
+That choice gives most weight to the directions of largest association. A
+different and equally standard reading normalizes the operator by the species
+degrees first, which down-weights the high-occurrence species that otherwise
+dominate the top eigenvectors, then takes the eigenvectors of that normalized
+matrix. This is the symmetric-normalized graph Laplacian eigenmap, and it
+consumes the same `kind = "sym"` operator every PMI-family weighting already
+produces. We write it as a factorization and register it once.
+
+A factorization function takes `(op, dim, ...)`, where `op` is the operator a
+weighting returned and `op$M` is the symmetric matrix for a `"sym"` operand. It
+returns a species by dimension matrix whose row names are `op$species`. The
+engine handles the kind check before calling it and the sign orientation after,
+so the function only needs to be deterministic. The body below uses base R,
+`Matrix`, and `RSpectra` and nothing else. The function `diffusion_map` here is
+the author's own code, not part of the SpecVec API.
+
+```{r diffusion-define}
+diffusion_map <- function(op, dim, ...) {
+  M <- op$M
+  d <- as.numeric(Matrix::rowSums(M))            # species degree
+  dinv <- ifelse(d > 0, 1 / sqrt(d), 0)
+  Dn <- Matrix::Diagonal(x = dinv)
+  Mn <- Dn %*% M %*% Dn                           # D^-1/2 M D^-1/2
+  Mn <- methods::as((Mn + Matrix::t(Mn)) / 2, "CsparseMatrix")
+  k  <- min(dim, nrow(Mn) - 1L)
+  e  <- RSpectra::eigs_sym(Mn, k = k, which = "LA")
+  V  <- e$vectors[, seq_len(k), drop = FALSE]
+  if (k < dim) V <- cbind(V, matrix(0, nrow(V), dim - k))
+  rownames(V) <- op$species
+  V
+}
+```
+
+`d` is the row sum of the symmetric matrix, the total association mass each
+species carries, and `dinv` is its inverse square root with zero where a species
+has no association at all. `Dn` is the diagonal scaling, and `Mn = Dn %*% M %*%
+Dn` is the symmetric-normalized matrix `D^{-1/2} M D^{-1/2}`. The symmetrize line
+removes the floating-point asymmetry the two products introduce, so the result
+reaching the solver is exactly symmetric and the fit stays deterministic. `k` is
+the requested dimension capped one below the species count, the bound a symmetric
+eigensolver respects. `RSpectra::eigs_sym(Mn, k = k, which = "LA")` returns the
+`k` largest algebraic eigenpairs of the normalized operator, the same solver
+`eigen` uses on the raw operator. The eigenvectors become the embedding columns,
+zero-padded when fewer are requested than the data supports, and the row names
+carry the species ids through. Returning the eigenvectors without an eigenvalue
+scaling is the deliberate difference from `eigen`: the Laplacian eigenmap reads
+geometry from the normalized spectrum, while `eigen` reads amplitude from the raw
+one. One registration adds it to the factorization registry.
+
+```{r diffusion-register}
+register_factorization("diffusion", diffusion_map,
+                       kind = "matrix", accepts = "sym")
+"diffusion" %in% specvec_methods()
+```
+
+The last line returns `FALSE`, which is correct: a factorization is registered,
+but no method preset names it yet. `specvec_methods()` lists method records, and
+the diffusion factorization is reachable through the `factorization` argument
+until a `register_method()` call gives it a friendly name. `accepts = "sym"` is
+the entire contract. The factorization names the one
+operator kind it reads, and from that moment it pairs with every weighting that
+produces that kind. We fit it against the PPMI operator by naming the two halves
+directly, with `method = NULL`.
+
+```{r diffusion-fit}
+emb_d <- species_embedding(x, weighting = "ppmi", factorization = "diffusion",
+                           method = NULL, dim = 6, min_occurrence = 2)
+dim(emb_d$V)
+nearest_species(emb_d, rownames(emb_d$V)[1], n = 3)
+```
+
+The embedding is a 12 by 6 matrix, one row per kept species, and
+`nearest_species()` reads it the same way it reads any other embedding. The
+neighbours are the species sharing a niche optimum, recovered through the
+normalized spectrum rather than the raw one. The factorization did not name a
+weighting anywhere. It declared `accepts = "sym"`, and the PPMI weighting
+declared `kind = "sym"`, so the engine paired them, ran the kind check, and
+applied the sign orientation, exactly as it does for the built-in `pmi` method.
+
+The O(1) point for the factorization half is that the same line works against
+every `"sym"` weighting at once. The abundance-weighted operator and the Jaccard
+operator registered earlier are both `"sym"`, so the new factorization reads
+them with no edit to either.
+
+```{r diffusion-composes}
+emb_a <- species_embedding(x, weighting = "abundance_pmi",
+                           factorization = "diffusion",
+                           method = NULL, dim = 6, min_occurrence = 2)
+emb_j <- species_embedding(x, weighting = "jaccard", factorization = "diffusion",
+                           method = NULL, dim = 6, min_occurrence = 2)
+c(abund = nrow(emb_a$V), jaccard = nrow(emb_j$V))
+```
+
+Both fits return a species by dimension matrix, and neither the abundance
+weighting nor the Jaccard weighting changed by a line. Three weightings now
+reach the diffusion readout through one registration, and the four shipped
+`"sym"` weightings (`ppmi`, `abundance_pmi`, `clr`, and the Jaccard added above)
+all reach it the same way. A method record makes one such pairing the default
+for a friendly name; `register_method()` would record `("ppmi", "diffusion")`
+under a name of its own and give it a capability descriptor, the subject of the
+next section.
+
+## Capability descriptor flags
+
+`register_method()` records four descriptor flags alongside the weighting and
+factorization names, and each one drives a specific behaviour. `input` is the
+operand shape: `"species_species"` for a square species matrix, the form the
+PMI-family methods build, and `"plot_species"` for the plot by species
+contingency. Correspondence analysis is the one shipped method that declares
+`input = "plot_species"`, because its weighting returns matrix-vector closures
+over the contingency table and never forms a square species matrix. The flag
+records that the operand is the rectangular table, a fact a consumer reads
+without building anything.
+
+`native_output` is `"species"` for a method that produces species vectors and
+pools community vectors from them afterward, or `"species_and_community"` for one
+that yields plot vectors in the same factorization. Every shipped method is
+`"species"`, with the uniform community readout pooling species vectors per plot,
+which keeps plot vectors comparable across methods. `supports_abundance` records
+whether the weighting reads the `COV` matrix; `abund_pmi`, `clr`, and `ca`
+differ here from `pmi` and `glove`, and a caller reads the flag to know whether
+an embedding will respond to cover or only to presence. `default_dim` is the
+dimension a fit uses when none is passed.
+
+These flags are read, not computed at fit time. The print method for an
+embedding reports them from the method record, so a method declares its shape
+once at registration rather than rediscovering it on every fit. Registering the
+diffusion factorization as a named method would set `input =
+"species_species"`, `native_output = "species"`, and `supports_abundance` to
+match its paired weighting, and those four values would then describe the method
+wherever it is listed or printed.
 
 ## Practical guidance
 
 A few rules keep an extension clean. Add a weighting when the operand is new: a
 different way to turn plots into a species by species (or plot by species) matrix,
 as Jaccard turns co-occurrence into an overlap fraction. Add a factorization when
-the operand is the same but the decomposition differs: a different way to read
-vectors out of a matrix the existing weightings already produce. Most ecological
-extensions are weightings, because the modelling choice usually lives in how
-association is measured.
+the operand is the same but the readout differs: a different way to read vectors
+out of a matrix the existing weightings already produce, as the diffusion map
+reads the normalized spectrum where `eigen` reads the raw one. Add an argument to
+an existing weighting or factorization when the change is a threshold or a switch
+rather than a new operand or readout. Most ecological extensions are weightings,
+because the modelling choice usually lives in how association is measured, and a
+single factorization then serves every weighting of its kind.
 
 Match the kind to the factorization. A `"sym"` operator needs a symmetric matrix
 and pairs with `eigen`; an asymmetric matrix breaks the real eigendecomposition
@@ -356,9 +501,13 @@ so its largest-magnitude entry is positive. A weighting that returns a stable
 operator therefore yields a stable embedding: two fits of the same data return
 identical matrices. Randomness inside a weighting, an unordered set used as a key,
 or a tie broken by floating-point noise would leak into the vectors and break that
-guarantee, so a weighting that needs a random component should seed it. The sign
-fix is applied after factorization, so an extension does not handle it; returning
-a deterministic operator is enough.
+guarantee, so a weighting that needs a random component should seed it. A
+factorization carries the same obligation. The diffusion map symmetrizes its
+normalized operator before the solve precisely so the matrix handed to
+`RSpectra::eigs_sym` is exactly symmetric, since an asymmetric input would give a
+complex spectrum and an unstable readout. The sign fix is applied after the
+factorization runs, so an extension does not handle it; returning a deterministic
+matrix from a deterministic operator is enough.
 
 Registrations belong in the `.onLoad` of an extending package, where they run
 once when the package loads, or in a script sourced before fitting; the registry

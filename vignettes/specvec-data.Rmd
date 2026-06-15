@@ -299,9 +299,11 @@ and the warning still fires, so an imputed value is visible rather than silent.
 
 ## On your own data
 
-A continental table such as the European Vegetation Archive maps straight onto
-the same call. The archive exports one row per plot-species observation already,
-so the work is naming columns: point each role at its column and read the cover
+A continental table such as the European Vegetation Archive (EVA) maps straight
+onto the same call. EVA is an access-controlled database, available on request
+rather than as an open download, and specvec bundles none of it. The archive
+exports one row per plot-species observation already, so the work is naming
+columns: point each role at its column and read the cover
 on the scale the archive uses. `data.table::fread()` handles a multi-million-row
 export at a speed base R reading cannot match, and the sparse matrices keep the
 built object small even when the species count runs into the tens of thousands.

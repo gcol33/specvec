@@ -75,8 +75,8 @@ underlying species vectors agree.
 
 The weighted average has a useful consequence. A plot vector is never an
 arbitrary point; it is a convex combination of its species' vectors, so it sits
-in the hull of the species it contains. A plot with one species sits exactly on
-that species' vector. A plot with many species spread across the embedding sits
+in the hull of the species it contains. A plot with one species sits on that
+species' vector. A plot with many species spread across the embedding sits
 near their weighted centroid, which tends toward the middle of the cloud. The
 geometry of the species embedding therefore propagates upward: if two species
 sit close because they co-occur, plots built from either of them sit close too.
@@ -172,6 +172,51 @@ points(comm_cov$U[lab, 1], comm_cov$U[lab, 2], pch = 16, col = "black")
 text(comm_cov$U[lab, 1], comm_cov$U[lab, 2], labels = lab, pos = 3, cex = 0.8)
 ```
 
+## Geometry of pooled plot vectors
+
+Pooling is a weighted average of species vectors, and the averaging fixes where a
+plot can land. A weighted average with non-negative weights is a convex
+combination, so a plot vector always sits inside the convex hull of the species
+it contains. The plot cannot land outside the cloud of its own species. A plot
+built from three species sits somewhere in the triangle their vectors span; add a
+fourth species and the plot can move into the tetrahedron, never beyond it.
+
+Two limiting cases make the geometry concrete. A plot holding a single species
+sits on that species' vector under presence pooling, and a plot holding two
+species at equal weight sits at their midpoint. We can check both. To keep every
+embedding species available for the lookup, the demo data carries one extra plot
+listing all species, then reads the geometry of the two plots of interest.
+
+```{r geometry-check}
+sp <- emb$species[1:2]
+demo <- rbind(
+  data.frame(plot = "solo", species = sp[1], cover = 50),
+  data.frame(plot = "pair", species = sp, cover = c(50, 50)),
+  data.frame(plot = "all",  species = emb$species, cover = 50))
+xg <- specvec(demo, "plot", "species", abundance = "cover")
+cg <- community_embedding(xg, embedding = emb, weights = "presence")
+c(solo = max(abs(cg$U["solo", ] - emb$V[sp[1], ])),
+  pair = max(abs(cg$U["pair", ] - (emb$V[sp[1], ] + emb$V[sp[2], ]) / 2)))
+```
+
+Both differences are zero: the one-species plot lands on its species' vector, and
+the two-species plot lands at the midpoint of the two vectors. The exact landing
+holds for presence pooling, where the weights are ones and sum to the number of
+species. Cover pooling keeps the direction but can shorten the vector, because the
+pooling floors the total weight at one to keep a faint plot from blowing up, so a
+single-species plot whose total cover weight is below one sits along the species'
+vector at reduced length rather than exactly on it.
+
+The hull property guides interpretation. A plot near the centre of the embedding
+cloud is a generalist mixture, drawing on species from across the space, so its
+vector averages out toward the middle. A plot near a species corner is dominated
+by that species and its close neighbours, so its vector sits out at the edge. Two
+plots near the same corner share that dominant kind of species; two plots near
+the centre may share nothing specific and still sit close, because both are broad
+mixtures. The novelty section below uses this directly: a plot that pools to a
+thinly populated region between corners is one whose species rarely keep company,
+and that is the geometric signature of an unusual community.
+
 ## Fitting fresh vs reusing an embedding
 
 `community_embedding()` can fit a species embedding on the spot. Passing
@@ -217,6 +262,75 @@ comm_norm$normalized
 range(sqrt(rowSums(comm_norm$U^2)))
 ```
 
+## Placing new plots in an existing frame
+
+The reuse path supports the workflow that matters most in practice: fit a frame
+once on a large reference body of plots, then drop a separate, smaller set of
+plots into that same frame and compare them against the reference. The frame is
+the species embedding. As long as every new plot is pooled through it, the new
+plot vectors land in the reference coordinate system and the comparison tools
+read them on equal terms with the reference plots.
+
+We split the simulated plots into a reference block and a query block, fit the
+species embedding on the reference alone, and then pool both blocks through that
+one embedding.
+
+```{r place-fit}
+all_plots <- rownames(comm_cov$U)
+ref_block <- all_plots[1:240]
+qry_block <- all_plots[241:300]
+x_ref <- specvec(df[df$plot %in% ref_block, ], "plot", "species", abundance = "cover")
+emb_ref <- species_embedding(x_ref, method = "abund_pmi", dim = 8, min_occurrence = 3)
+comm_ref <- community_embedding(x_ref, embedding = emb_ref)
+```
+
+The query block never entered the fit. Its plots are placed afterwards by pooling
+their species through `emb_ref`, the embedding learned from the reference. The
+result is a community object whose rows are the query plots and whose columns are
+the reference frame's dimensions.
+
+```{r place-pool}
+x_qry <- specvec(df[df$plot %in% qry_block, ], "plot", "species", abundance = "cover")
+comm_qry <- community_embedding(x_qry, embedding = emb_ref)
+dim(comm_ref$U)
+dim(comm_qry$U)
+```
+
+The query matrix has 60 rows and the same 8 columns as the reference, so the two
+sit in one space. `community_similarity()` with the reference passed through
+`reference =` returns a 60-by-240 matrix: each query plot scored against every
+reference plot. Reading off the column of the largest entry per row gives each
+query plot its closest match in the reference.
+
+```{r place-match}
+S_qr <- community_similarity(comm_qry, reference = comm_ref, metric = "cosine")
+dim(S_qr)
+best_match <- apply(S_qr, 1, function(row) colnames(S_qr)[which.max(row)])
+head(best_match, 3)
+```
+
+`community_novelty()` then scores how far each query plot sits from the reference
+body, against the same reference coordinates.
+
+```{r place-novelty}
+nov_qry <- community_novelty(comm_qry, comm_ref, k = 5)
+round(range(nov_qry), 3)
+```
+
+This is the realistic version of placing a small survey in a continental frame.
+The reference embedding stands in for a large, authoritative dataset; the query
+plots are a fresh survey too small to fit a stable embedding on its own. Pooling
+the survey through the reference embedding gives every new plot coordinates that
+mean the same thing as the reference coordinates, so similarity and novelty read
+correctly without refitting. One condition makes the placement work: every
+species in the query data must be a species the reference embedding knows. The
+pooling looks up each embedding species in the query data, so a query species
+absent from the reference frame has no vector to contribute, and a query frame
+missing reference species cannot be indexed. In practice a query is harmonised to
+the reference taxonomy first, and species the reference never saw are dropped from
+the query before pooling, the same way the rare-species filter drops them at fit
+time.
+
 ## Community similarity
 
 `community_similarity()` compares plot vectors. Called on one community object it
@@ -241,6 +355,78 @@ long as their species occupy nearby parts of the embedding. That is the
 difference from a Jaccard or Bray-Curtis index computed on the species lists:
 the embedding lets ecologically similar species stand in for each other, while a
 set-overlap index counts only the species that match by name.
+
+## Embedding similarity vs raw set overlap
+
+The claim that the embedding sees structure a set-overlap index misses is worth
+testing directly. We can build a Jaccard dissimilarity from the presence matrix
+`x$P` in a few lines, with no extra package: Jaccard is one minus the size of the
+shared species set divided by the size of the combined set. The presence matrix
+carries plots in its rows and species in its columns, so a row of `x$P` greater
+than zero is a plot's species list as a logical vector.
+
+```{r jaccard-fn}
+plots_sub <- rownames(comm_cov$U)[1:60]
+P_sub <- as.matrix(x$P[plots_sub, , drop = FALSE]) > 0
+jaccard <- function(a, b) {
+  u <- sum(a | b)
+  if (u == 0) 1 else 1 - sum(a & b) / u
+}
+```
+
+Filling a 60-by-60 Jaccard matrix is a double loop over the plot pairs. Alongside
+it we take the cosine similarity from the embedding and turn it into a
+dissimilarity by subtracting from one, so both matrices read the same direction:
+small means similar, large means different.
+
+```{r jaccard-build}
+n <- length(plots_sub)
+Jac <- matrix(0, n, n, dimnames = list(plots_sub, plots_sub))
+for (i in seq_len(n)) for (j in seq_len(n)) Jac[i, j] <- jaccard(P_sub[i, ], P_sub[j, ])
+cos_dis <- 1 - community_similarity(comm_cov, metric = "cosine")[plots_sub, plots_sub]
+ut <- upper.tri(Jac)
+cor(Jac[ut], cos_dis[ut], method = "spearman")
+```
+
+The Spearman correlation between the two dissimilarities runs about 0.82 on this
+set. The embedding and the species lists agree on the broad ordering of plot
+pairs, which is the reassuring part: plots that share many species mostly do sit
+close in the embedding. The 0.82 also leaves room for disagreement, and the
+disagreement is where the embedding earns its place. The clearest case is a pair
+of plots that share no species at all, which Jaccard scores as maximally
+dissimilar by construction, yet which the embedding places close together.
+
+```{r jaccard-pair}
+zero_overlap <- Jac == 1
+diag(zero_overlap) <- FALSE
+emb_cos <- community_similarity(comm_cov, metric = "cosine")[plots_sub, plots_sub]
+emb_cos[!zero_overlap] <- -Inf
+hit <- which(emb_cos == max(emb_cos), arr.ind = TRUE)[1, ]
+pa <- plots_sub[hit[1]]; pb <- plots_sub[hit[2]]
+c(shared_species = sum(P_sub[hit[1], ] & P_sub[hit[2], ]),
+  jaccard = Jac[hit[1], hit[2]],
+  cosine = round(emb_cos[hit[1], hit[2]], 3))
+```
+
+The two plots `r pa` and `r pb` hold no species in common, so
+their Jaccard dissimilarity is the maximum 1, and a checklist comparison files
+them as unrelated. Their cosine similarity in the embedding is around 0.95. The
+species that fill the two plots are different by name but sit in the same region
+of the embedding, because they co-occur with a common third set of species across
+the wider dataset, so the pooled plot vectors point almost the same way. A
+set-overlap index cannot reach this conclusion: it has only the species names and
+no notion that two unshared species play similar ecological roles. The embedding
+carries that notion in the geometry, which is the reason to pool through it rather
+than score the raw lists.
+
+The disagreement runs the other way too. Two plots can share a species or two yet
+sit apart in the embedding when their other species pull them into different
+regions. Jaccard counts the shared name while the embedding weighs the whole
+composition, so the two indices answer different questions. The Jaccard number
+measures how much the species lists overlap, while the cosine measures how close
+the communities sit in the learned species space. For ordination, gradient analysis, and novelty
+scoring, the second question is usually the one of interest, which is why the rest
+of this vignette works in the embedding.
 
 A reference set goes in through the `reference` argument. The result has one row
 per plot in `object` and one column per plot in `reference`, so it answers "how
@@ -278,6 +464,55 @@ its nearest neighbours, so the two functions read plots through one geometry.
 D <- community_similarity(comm_cov, metric = "euclidean")
 round(D[1:4, 1:4], 2)
 ```
+
+### How far the two metrics agree
+
+We can measure how much the choice of metric changes the ranking of plot pairs.
+Take the cosine dissimilarity and the Euclidean distance over the whole community
+set, and correlate them by rank across all plot pairs. A rank correlation of one
+would mean the two metrics order every pair the same way.
+
+```{r metric-rank}
+cos_d <- 1 - community_similarity(comm_cov, metric = "cosine")
+euc_d <- community_similarity(comm_cov, metric = "euclidean")
+ut <- upper.tri(cos_d)
+cor(cos_d[ut], euc_d[ut], method = "spearman")
+```
+
+The correlation is about 0.99 on this set. The two metrics mostly agree, because
+the plot vectors here vary only modestly in length: the niche simulation gives
+every plot a comparable number of species, so the pooled vectors sit at similar
+distances from the origin. The agreement is not perfect, and the gaps show up in
+the neighbour rankings of individual plots. We take the plot with the longest
+vector and list its nearest neighbours under each metric.
+
+```{r metric-neighbours}
+len <- sqrt(rowSums(comm_cov$U^2))
+foc <- names(which.max(len))
+cos_nn <- names(sort(community_similarity(comm_cov)[foc, ], decreasing = TRUE))[2:4]
+euc_nn <- names(sort(community_similarity(comm_cov, metric = "euclidean")[foc, ]))[2:4]
+rbind(cosine = cos_nn, euclidean = euc_nn)
+```
+
+The two neighbour lists share their first two entries and diverge at the third.
+Cosine and Euclidean agree on the very closest plots and start to disagree
+further out, where a longer plot vector that points almost the same way scores
+high on cosine yet sits a measurable distance away. Setting `normalize = TRUE` at
+the pooling step erases that length difference, so the Euclidean distance then
+depends on direction alone. The two metrics then rank every pair identically.
+
+```{r metric-norm}
+euc_dn <- community_similarity(comm_norm, metric = "euclidean")
+cor(cos_d[ut], euc_dn[ut], method = "spearman")
+```
+
+The rank correlation between cosine dissimilarity and normalized Euclidean
+distance is exactly one. After normalization the Euclidean distance between two
+unit vectors is a monotone function of their cosine, so the two readouts carry the
+same ordering. The practical rule that follows: if a downstream method works in
+Euclidean distance but you want it to read composition the way cosine does, pool
+with `normalize = TRUE` and the distance will behave like cosine without any
+further adjustment.
 
 An `image()` of a small cosine block shows the structure at a glance. Brighter
 cells are more similar plot pairs; the bright diagonal is each plot against
@@ -377,6 +612,77 @@ hist(nov, breaks = 12, col = "grey80", border = "white",
 rug(nov[is_odd], col = "red", lwd = 2)
 ```
 
+### Three definitions of distance to a reference
+
+The mean-of-k-nearest score is one of three natural ways to measure how far a
+plot sits from a reference. We can compute all three for a single odd plot and
+compare. The distance to the single nearest reference plot reacts to one
+neighbour; the distance to the reference centroid averages over the whole
+reference and ignores local structure; the mean of the five nearest sits in
+between.
+
+```{r novelty-defs}
+R <- comm_ref$U
+q <- comm_qry$U[which(is_odd)[1], ]
+d_all <- sqrt(rowSums((R - matrix(q, nrow(R), ncol(R), byrow = TRUE))^2))
+c(nearest = min(d_all),
+  mean_k5 = mean(sort(d_all)[1:5]),
+  centroid = sqrt(sum((q - colMeans(R))^2)))
+```
+
+The distance to the single nearest plot is around 0.48, the mean of the five
+nearest around 0.52, and the distance to the centroid around 0.78. The centroid
+distance reads largest because the reference fans out around its mean, so even a
+plot inside the cloud sits some way from the average point. The centroid figure
+also misses the local picture: it cannot tell a plot in a dense reference pocket
+from one in a sparse pocket the same distance from the mean. The single-nearest
+figure has the opposite weakness, swinging on one chance neighbour. The mean of
+the five nearest reads the local pocket, which is the property
+`community_novelty()` is built on.
+
+### How k moves the scores
+
+The value of `k` shifts the scores in a predictable way. We sweep `k` and record
+the mean novelty of the odd plots, the mean for the ordinary query plots, and
+their ratio.
+
+```{r novelty-ksweep}
+ks <- c(1, 3, 5, 10, 20)
+sweep <- t(sapply(ks, function(k) {
+  nv <- community_novelty(comm_qry, comm_ref, k = k)
+  c(k = k, odd = mean(nv[is_odd]), ordinary = mean(nv[!is_odd]),
+    ratio = mean(nv[is_odd]) / mean(nv[!is_odd]))
+}))
+round(sweep, 3)
+```
+
+Every score rises with `k`, because reaching for more neighbours pulls in plots
+that sit further away. The ordinary plots climb faster than the odd ones, so the
+ratio falls from near 7 at `k = 1` to about 3 at `k = 20`. The odd plots stay
+flagged across the whole range, which is the steadiness the mean buys, yet a large
+`k` blunts the contrast by averaging the reference's sparse pockets into its dense
+ones. A moderate `k` keeps the odd plots far above the ordinary ones while still
+smoothing single-neighbour noise.
+
+### A plain matrix as the reference
+
+The reference does not have to be a community object. `community_novelty()` reads
+either a `specvec_community` or a plain numeric matrix of community vectors, so a
+fixed reference frame can be saved once and reused across query batches.
+
+```{r novelty-matrix}
+R_mat <- comm_ref$U
+nov_mat <- community_novelty(comm_qry, R_mat, k = 5)
+identical(unname(nov_mat), unname(nov))
+```
+
+The scores from the matrix reference match the scores from the community object
+exactly, because the function works on the underlying plot-by-dim matrix either
+way. In a production setting the reference matrix is computed once on the
+authoritative dataset and stored, and each incoming batch of plots is scored
+against the stored matrix without rebuilding a community object, which keeps the
+reference fixed across every batch.
+
 The choice of `k` trades sensitivity against stability. Small `k` (1 or 2) reacts
 to the single closest reference plot and flags anything off the beaten track, at
 the cost of noise. Larger `k` averages over a neighbourhood and reports distance
@@ -410,6 +716,24 @@ direction and the length of each plot vector, so a strongly loaded plot reads as
 more extreme than a faint one. Set `normalize = TRUE` when plots should be
 compared on composition alone, which is the common choice ahead of cosine
 clustering, since every plot then sits on the unit sphere and length drops out.
+Pairing `normalize = TRUE` with `metric = "euclidean"` makes the distance match
+the cosine ordering, which is the setting to use when a downstream method expects
+Euclidean input yet you want it to read composition.
+
+Match the metric to the question. Cosine reads the compositional direction of a
+plot and ignores how strongly its species load; Euclidean distance feels both
+direction and length. For comparing what kind of community two plots are, cosine
+is the usual choice. For novelty, the score is built on Euclidean distance, so
+plots that load weakly on the embedding read as nearer the origin and can score
+lower; normalize the pooling first if length should not enter the novelty score.
+
+Place a small survey in a large frame by reusing the embedding. Fit the species
+embedding on the large reference dataset, then pool the small survey through it
+with `embedding =`. The survey plots land in the reference coordinate system and
+compare directly to the reference with `community_similarity()` and
+`community_novelty()`. Harmonise the survey's species to the reference taxonomy
+first, since a survey species the reference never saw has no vector to contribute
+and a survey missing reference species cannot be pooled through the frame.
 
 Pool several community sets from one shared embedding. Fitting the species
 embedding once and passing it through `embedding =` to each

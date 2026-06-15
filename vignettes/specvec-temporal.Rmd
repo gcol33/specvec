@@ -125,6 +125,108 @@ alignment problem in miniature, and it is the reason `species_trajectory()`
 exists: it fits the frame once and reuses it for every window, so the comparison
 is clean by construction.
 
+## Quantifying the alignment problem
+
+The argument above is easy to state and easy to underweight. It helps to put a
+number on it. We take the species shared between the two independent window fits,
+read off the displacement each species appears to make from the early fit to the
+late fit, and then compare that naive displacement against the displacement the
+fixed frame reports for the same species. The two readings should disagree
+sharply, because the naive one mixes a genuine compositional shift with a change
+of basis that nobody asked for.
+
+We start with the shared species. Both fits keep every species above the
+occurrence floor in their own window, so the overlap is the set of species
+present in both halves of the series.
+
+```{r align-shared}
+Ve <- emb_early$V; Vl <- emb_late$V
+shared <- intersect(rownames(Ve), rownames(Vl))
+shared <- setdiff(shared, "focal")
+length(shared)
+```
+
+The naive displacement is the row-wise Euclidean distance between the early and
+late coordinate matrices, restricted to those shared species. If the two fits
+spoke the same language, a species that did not move would sit at distance zero
+and one that moved a little would sit at a small distance. They do not speak the
+same language, so the distances are large and roughly uniform across species that
+the simulation never perturbed.
+
+```{r align-naive}
+naive <- sqrt(rowSums((Ve[shared, ] - Vl[shared, ])^2))
+summary(naive)
+```
+
+These numbers are not a measurement of movement. They are the gap between two
+arbitrary bases, the same gap that a Procrustes step would try to rotate away.
+The honest test is to grant the comparison its best chance and fit the optimal
+orthogonal rotation that maps the late fit onto the early fit, then measure what
+displacement survives. The rotation is the closed-form orthogonal Procrustes
+solution from the singular value decomposition of the cross-product.
+
+```{r align-flip}
+E <- Ve[shared, ]; L <- Vl[shared, ]
+sv <- svd(crossprod(L, E))
+R <- sv$u %*% t(sv$v)
+L_rot <- L %*% R
+aligned <- sqrt(rowSums((E - L_rot)^2))
+summary(aligned)
+```
+
+Even after the best possible rotation a sizeable residual survives, and the
+rotation was fitted to the very species it then scores, which is the circularity
+the alignment cannot escape. There is no clean displacement to extract here.
+
+The fixed frame reports something different. We fit one frame on all species,
+then read each shared species at its early and late window centroid in that one
+frame (a focal species never enters its own centroid), and take the same row-wise
+distance. Because the frame never moved, this distance is a displacement and
+nothing else.
+
+```{r align-frame}
+frame_all <- species_embedding(x, dim = 6, min_occurrence = 2)
+tr_shared <- species_trajectory(x, species = shared, frame_embedding = frame_all,
+                               by = c(1985, 2005, 2025))
+ds <- as.data.frame(tr_shared)
+e <- ds[ds$center == 1995, ]; l <- ds[ds$center == 2015, ]
+l <- l[match(e$species, l$species), ]
+dd <- paste0("d", 1:6)
+frame_disp <- sqrt(rowSums((as.matrix(e[, dd]) - as.matrix(l[, dd]))^2))
+summary(frame_disp)
+```
+
+The fixed-frame displacements are smaller and, more to the point, interpretable.
+The species the simulation held steady move little, and the spread reflects real
+differences in how their associates turned over. The naive median sits well above
+the fixed-frame median, and that gap is the alignment problem made numeric.
+
+```{r align-compare}
+c(naive_median = median(naive),
+  frame_median = median(frame_disp),
+  ratio = median(naive) / median(frame_disp))
+```
+
+The ratio is the size of the artifact the fixed frame removes. The naive
+comparison spends most of its magnitude on the change of basis; the fixed-frame
+comparison spends all of it on the data. This is what we mean when we call the
+per-window-refit approach uninterpretable: the arithmetic is correct and the
+coordinates it runs on are arbitrary.
+
+A reader might ask whether a better alignment, a full Procrustes rotation rather
+than the greedy axis match used above, would close the gap. It would shrink the
+residual, and on data where the two windows share almost all their species and
+structure it can shrink it a long way. The trouble is that the rotation is fitted
+to make the two coordinate matrices agree, so it absorbs whatever it can,
+including genuine movement, and the better it fits the more real signal it can
+quietly remove. On a series where the species pool turns over, which is the case
+worth studying, the alignment has the most license to overcorrect exactly where
+the most is happening. The fixed frame avoids the question by never asking it.
+Nothing is rotated, so nothing real can be rotated away, and the cost is only that
+the frame must be fitted on a set of species stable enough to anchor every
+window. The frame is a modelling decision made once and in the open. The
+per-window rotation is re-estimated silently at every comparison.
+
 ## Species trajectories
 
 `species_trajectory()` traces one or more focal species through the fixed frame.
@@ -132,6 +234,17 @@ The frame defaults to every species except the focal ones, so the focal species
 move through a background they do not help define. Each window places the focal
 species at the cover-weighted centroid of the frame species it co-occurs with in
 that window, and a focal species never contributes to its own position.
+
+The exclusion is what makes the trajectory clean. If the focal species helped
+define the frame, its own position would be partly a function of itself, and a
+track that moved would be hard to separate from a track that re-weighted its own
+contribution to the axes. Holding the focal species out of the frame makes the
+centroid a direct readout: the focal species is wherever its current associates
+already sit. When those associates turn over, the focal species moves; when they
+hold, it stays. Nothing about the axes changes between windows, so the only thing
+that can change a coordinate is the composition the focal species keeps. That is
+the property that makes a difference between two window positions a measurement
+the data supports.
 
 ```{r traj}
 tr <- species_trajectory(x, species = "focal", by = NULL, dim = 6,
@@ -168,7 +281,12 @@ ample co-occurrence and none are `NA`.
 The displacement of the focal species between consecutive windows is the
 Euclidean distance between successive rows of the coordinate matrix. The frame is
 fixed, so this distance is a real measure of how far the species' associates
-moved, not an artifact of refitting.
+moved, not an artifact of refitting. A displacement near zero means the focal
+species kept the same company across the two windows; a large displacement means
+its co-occurrents shifted toward a different region of the frame. Because the
+distance is taken across all `dim` coordinates at once, it captures movement
+along every axis together, which matters when a turnover spreads across several
+frame dimensions at the same time.
 
 ```{r traj-plot}
 dcols <- grep("^d[0-9]+$", names(d))
@@ -194,7 +312,79 @@ plot(d$center, d$d1, type = "b", pch = 19,
 ```
 
 Both views read the same fixed frame, so a movement on the plot is a movement in
-the data.
+the data. The displacement plot and the `d1` trace answer slightly different
+questions. The displacement plot asks how fast the species is moving between
+consecutive windows, with no sign and no direction, so it peaks where change is
+quickest. The `d1` trace asks where the species sits on the dominant axis at each
+window, with a direction, so it shows the cumulative drift. A monotone `d1` trace
+with a single displacement peak in the middle is the signature of a steady
+directional shift that runs fastest halfway through, which is exactly the pull the
+simulation built in.
+
+## Tracing several species at once
+
+`species` takes a vector, so one call traces several focal species through the
+same frame. This is more than a convenience. When every focal species reads the
+same fixed frame, their trajectories are directly comparable to each other as
+well as across time, which a series of separate single-species calls could not
+guarantee if each refitted its own background. We add two more focal species to
+the simulation to have something to trace alongside the original.
+
+```{r multi-sim}
+df0 <- sim_time()
+extra <- do.call(rbind, lapply(split(df0, df0$plot), function(g) {
+  if (runif(1) < 0.4) rbind(g, transform(g[1, ], species = "rider", cover = 30))
+  else if (runif(1) < 0.4) rbind(g, transform(g[1, ], species = "stayer", cover = 30))
+  else g
+}))
+xm <- specvec(extra, "plot", "species", abundance = "cover", time = "decade")
+```
+
+With three focal names the return array gains a leading dimension. `U` is now a
+focal-by-window-by-dim array, three slabs deep, one slab per focal species, each
+slab a window-by-dim matrix in the shared frame. The `support` matrix gains a
+matching row per focal species. The array layout keeps the three indices
+separate so that any one of them can be held fixed and the others read out: fix a
+species to get its full window-by-dim track, fix a window to compare where all
+three species sit at one decade, or fix a dimension to watch every species move
+along a single frame axis. The tidy data frame flattens the first two indices
+into rows and keeps the dimensions as columns, which is the shape most plotting
+and modelling code expects, while the raw array stays available for the slicing a
+data frame makes awkward.
+
+```{r multi-traj}
+trm <- species_trajectory(xm, species = c("focal", "rider", "stayer"),
+                         by = NULL, dim = 6, min_occurrence = 2)
+dim(trm$U)
+```
+
+The tidy form spreads that array into one row per focal-species-by-window cell,
+so three species across four windows give twelve rows, carrying the `species`
+column to tell them apart.
+
+```{r multi-df}
+dm <- as.data.frame(trm)
+table(dm$species)
+head(dm[, c("species", "window", "support", "d1")], 6)
+```
+
+Plotting the first frame coordinate for two of the focal species on one pair of
+axes shows their tracks side by side in the same frame. The species the
+simulation pulls toward the `b` pool should sweep across the leading axis while a
+species spread evenly across plots should sit nearly flat.
+
+```{r multi-plot}
+f <- dm[dm$species == "focal", ]; s <- dm[dm$species == "stayer", ]
+rng <- range(c(f$d1, s$d1))
+plot(f$center, f$d1, type = "b", pch = 19, ylim = rng,
+     xlab = "decade", ylab = "first frame coordinate (d1)")
+lines(s$center, s$d1, type = "b", pch = 17, lty = 2)
+legend("topright", c("focal", "stayer"), pch = c(19, 17), lty = c(1, 2), bty = "n")
+```
+
+The two traces read off one frame, so the vertical gap between them at any decade
+is a real difference in where the two species sit relative to the same
+background.
 
 ## Choosing windows
 
@@ -224,6 +414,112 @@ windows hold more plots per window, which steadies the centroid in each cell whi
 lowering temporal resolution. Both readings describe the same trajectory at two
 grains, and the break vector sets the grain.
 
+## Reusing one frame across analyses
+
+Both verbs fit a frame embedding internally, and both accept a pre-fitted one
+through `frame_embedding =`. Passing the same frame to a species trajectory and a
+community trajectory puts the two readings in one coordinate system, so a
+species' track and the community novelty around it are written in the same basis
+and can be overlaid without any further alignment. We fit the frame once with
+`species_embedding()`, on a stable backbone, and hand it to both verbs.
+
+```{r reuse-fit}
+frame <- species_embedding(x, dim = 6, min_occurrence = 2)
+frame
+```
+
+The species trajectory now reuses this frame instead of fitting its own. The
+focal species rides through the supplied coordinate system, and the result is
+byte-comparable to anything else that reads the same frame.
+
+```{r reuse-species}
+tr_f <- species_trajectory(x, species = "focal", frame_embedding = frame,
+                          by = NULL)
+identical(tr_f$frame$V, frame$V)
+```
+
+The community trajectory takes the same frame, so its per-window communities and
+its novelty live in the basis the species track already used.
+
+```{r reuse-comm}
+ct_f <- community_trajectory(x, frame_embedding = frame, by = NULL, k = 5)
+identical(ct_f$frame$V, frame$V)
+```
+
+The shared frame is what lets `integration_trajectory()` read a neophyte's
+distance to a native community over time as a single comparable number. The
+neophyte's position and the community's position both come out of one fixed
+frame, so their separation is a distance in that frame and not a mismatch between
+two bases.
+
+There is a subtler use. A species can be projected into a frame that does not
+contain it, because the projection only reads the frame species the focal
+co-occurs with. We fit a frame on every species except the focal, drop the focal
+from it explicitly so the frame genuinely never saw it, and place the focal into
+that frame anyway.
+
+```{r reuse-outframe}
+others <- setdiff(x$species, "focal")
+frame_no_focal <- species_embedding(x, dim = 6, min_occurrence = 2)
+keep <- rownames(frame_no_focal$V) %in% others
+frame_no_focal$V <- frame_no_focal$V[keep, , drop = FALSE]
+frame_no_focal$species <- rownames(frame_no_focal$V)
+"focal" %in% frame_no_focal$species
+tr_out <- species_trajectory(x, species = "focal",
+                            frame_embedding = frame_no_focal, by = NULL)
+sum(is.na(tr_out$U))
+```
+
+The frame contains no `focal` row, yet no cells are `NA`: the focal species
+placed cleanly in every window, read entirely against the frame species it
+co-occurs with. This is the out-of-frame projection idea, and it is the same
+mechanism a new or held-out species uses to enter an already-fitted coordinate
+system. The frame holds the coordinates fixed; a fresh focal species is read
+against it without disturbing it, the way a held-out point is scored against a
+model that was fitted without it. The one requirement is that the focal species
+co-occur with at least one frame species in a window, since with no co-occurrence
+there is no centroid to compute and that window's cell falls back to `NA`.
+
+## Presence and cover weighting in trajectories
+
+The `weights` argument changes what a co-occurrence is worth when the centroid is
+formed. With `weights = "cover"`, the default when cover is present, each
+co-occurrence is weighted by the geometric mean of the two covers, matching the
+AbundPMI operator the frame itself uses, so an abundant associate pulls the
+centroid harder than a sparse one. With `weights = "presence"`, every
+co-occurring plot counts the same regardless of how much of either species was
+present. The two readings differ whenever abundance carries signal, which is the
+common case in vegetation data.
+
+```{r weights-cover}
+tr_cov <- species_trajectory(x, species = "focal", weights = "cover",
+                            by = NULL, dim = 6, min_occurrence = 2)
+tr_pre <- species_trajectory(x, species = "focal", weights = "presence",
+                            by = NULL, dim = 6, min_occurrence = 2)
+```
+
+Reading the first frame coordinate under each weighting on one pair of axes shows
+the tracks part company. They agree on the broad direction, because the
+underlying turnover is the same, and they disagree on the detail, because cover
+re-weights which associates dominate the centroid in each window.
+
+```{r weights-plot}
+dc <- as.data.frame(tr_cov); dp <- as.data.frame(tr_pre)
+rng <- range(c(dc$d1, dp$d1))
+plot(dc$center, dc$d1, type = "b", pch = 19, ylim = rng,
+     xlab = "decade", ylab = "first frame coordinate (d1)")
+lines(dp$center, dp$d1, type = "b", pch = 17, lty = 2)
+legend("topright", c("cover", "presence"), pch = c(19, 17), lty = c(1, 2), bty = "n")
+```
+
+Cover is the sharper instrument when the abundance values mean something, since it
+lets a dominant associate steer the centroid the way it steers the community.
+Presence is the safer instrument when covers are ordinal guesses, patchily
+recorded, or absent, since it asks only the question the data can answer, which
+species were there together. The choice is a statement about how far the
+abundance numbers can be trusted, and it rewards a deliberate decision over the
+default.
+
 ## Community trajectories and novelty over time
 
 `species_trajectory()` follows individual species. `community_trajectory()`
@@ -249,7 +545,16 @@ ct$novelty
 Mean novelty climbs across the decades, because each later window's communities
 have drifted further from the 1990 baseline as the `focal`-carrying plots take on
 more of the `b` pool. The reference window sits at novelty zero up to the nearest-
-neighbour averaging, since it is being compared to itself.
+neighbour averaging, since it is being compared to itself. The median sits beside
+the mean in the table for a reason: novelty is a per-plot quantity, and a window
+can carry a few highly novel plots against a stable majority. When the mean runs
+well above the median, a minority of plots is doing the drifting; when the two
+track each other, the whole window has shifted together. Reading both keeps a
+single unusual plot from being mistaken for a community-wide change. The choice
+of `k` sets how forgiving the novelty measure is: a small `k` flags a plot as
+novel the moment it sits far from its very nearest reference neighbours, while a
+larger `k` averages over more of the reference cloud and asks the plot to be far
+from a broader baseline before it scores high.
 
 ```{r comm-plot}
 nv <- ct$novelty
@@ -283,7 +588,30 @@ identical(ct_idx$reference, "2020")
 
 The `communities` field holds the per-window plot-by-dim matrices in the shared
 frame, so the embeddings are available for similarity work, clustering, or
-plotting beyond the novelty summary.
+plotting beyond the novelty summary. It is a list with one matrix per window,
+keyed by window label, each row a plot and each column a frame dimension.
+
+```{r comm-communities}
+lengths(lapply(ct$communities, nrow))
+dim(ct$communities[["1990"]])
+```
+
+Because every matrix sits in the one frame, the window centroids are comparable
+directly. Stacking the per-window mean position and tracking it across decades
+gives a community-level analogue of the species track: the average plot moving
+through the frame as its composition drifts. We read the first two frame
+coordinates of each window centroid and trace them in order.
+
+```{r comm-centroid}
+cen <- t(sapply(ct$communities, colMeans))
+plot(cen[, 1], cen[, 2], type = "b", pch = 19,
+     xlab = "frame d1", ylab = "frame d2",
+     main = "community centroid path through the frame")
+text(cen[, 1], cen[, 2], rownames(cen), pos = 3)
+```
+
+The centroid walks across the frame in decade order, the community-scale version
+of the same turnover the focal species traced one species at a time.
 
 ## Practical guidance
 
@@ -292,8 +620,20 @@ A few rules of thumb keep trajectories honest.
 **Read the support before trusting a cell.** A focal species placed from two
 co-occurring plots gives a noisier centroid than one placed from eighty. The
 `$support` matrix on a species trajectory and the `$n_plots` column on both
-`$windows` and `$novelty` report exactly how much data backs each cell. Windows
-where support drops into the low single digits deserve a skeptical eye.
+`$windows` and `$novelty` report exactly how much data backs each cell. As a
+working rule, treat a cell with support below 5 plots as indicative only and a
+cell with support below 3 as unreliable, the same floor the default
+`min_occurrence = 5` applies to the frame itself. The support matrix is small
+enough to scan directly before any conclusion is drawn from a track.
+
+```{r guide-support}
+range(tr$support)
+which(tr$support < 5, arr.ind = TRUE)
+```
+
+A track that looks dramatic only in a window where support has collapsed is a
+track to distrust. The cheapest defense is to print `min(tr$support)` alongside
+any displacement and refuse to read movement out of a cell the data cannot back.
 
 **Match window width to the question.** Narrow windows resolve fine temporal
 structure but spread the plots thin, raising the chance of `NA` cells and unstable
@@ -320,9 +660,20 @@ pre-fitted `specvec_embedding`. Fitting one frame and passing it to both
 the community novelty in the same coordinate system, so the two readings line up
 exactly.
 
-Trajectories stop being reliable when windows go sparse: a focal species with no
-co-occurrence in a window yields an `NA` cell, and a window with only a handful of
-plots gives a centroid that swings on individual records.
+**When trajectories stop being reliable.** Two failure modes deserve a name.
+The first is the empty cell: a focal species with no co-occurrence in a window
+has no centroid, and the coordinate columns come back `NA`. This is honest
+behaviour, the function declining to invent a position, and `as.data.frame(tr,
+na.rm = TRUE)` drops those rows so the gap does not leak into a plot. The second
+is the swinging cell: a window holding only a handful of plots gives a centroid
+that lurches on individual records, because one unusual plot is a large fraction
+of the pool. A track that is steady through well-populated windows and erratic
+through a thin one is reporting the thinness of that window. The remedy for both
+is the same, widen the window with the `by` break vector until each cell clears
+the support floor, and accept the loss of temporal resolution that buys. A frame
+fitted on too few species fails earlier and louder, since the default
+`min_occurrence` will drop most species and the frame will refuse to fit below
+two; that error is a signal to pool windows or lower the floor on purpose.
 
 `integration_trajectory()` is the applied specialization of this machinery for
 alien-integration questions: it places a neophyte with `species_trajectory()`,

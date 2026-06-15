@@ -15,13 +15,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(specvec)
 ```
 
-This vignette defines the maths SpecVec runs. Every method follows one pipeline:
+This vignette defines the maths SpecVec runs. It is the theory companion to the
+quickstart, which shows the verbs in use, and to the extending vignette, which
+shows how to add a recipe of your own. Here we stay on the algorithm: what each
+operator measures, how each factorization reads vectors out of it, and why the
+two halves snap together the way they do. Every method follows one pipeline:
 
 ```
 plot x species (+ cover)
         |
         v
-   co-occurrence operator        (counts, PMI, cover-weighted PMI, or chi-square)
+   co-occurrence operator        (counts, PMI, cover-weighted PMI, chi-square, CLR)
         |
         v
    factorization                 (eigen, implicit SVD, or GloVe)
@@ -30,9 +34,47 @@ plot x species (+ cover)
    species vectors  ->  community vectors (pooled)
 ```
 
-A method is a registered `(weighting, factorization)` pair. `ca`, `pmi`,
-`abund_pmi`, and `glove` are points on this grid, and `specvec_methods()` lists
+A method is a registered `(weighting, factorization)` pair. `abund_pmi`, `pmi`,
+`ca`, `glove`, and `clr` are points on this grid, and `specvec_methods()` lists
 them.
+
+```{r methods}
+specvec_methods()
+```
+
+## Algorithm overview
+
+The pipeline above has two moving parts and a fixed handshake between them. A
+*weighting* turns the plot-by-species data into an operator: a square species
+association, a raw count matrix, or a set of matrix-vector closures over the
+contingency table. A *factorization* turns that operator into a species-by-dim
+matrix of vectors. The handshake is the operator's `kind` field. Each weighting
+stamps its output with one of three kinds, each factorization declares the one
+kind it accepts, and the engine checks the two agree before any numerical work
+begins. The three kinds and their consumers are fixed:
+
+```
+kind "sym"      -> symmetric species x species $M       consumed by  eigen
+kind "counts"   -> species x species co-occurrence $M    consumed by  glove
+kind "implicit" -> matvec closures $Af/$Atf + readout    consumed by  svd
+```
+
+The five shipped methods place themselves on this grid as follows. `abund_pmi`
+and `pmi` and `clr` all build a `"sym"` operator and hand it to `eigen`; they
+differ only in how the symmetric matrix is filled. `ca` builds an `"implicit"`
+operator and hands it to `svd`. `glove` builds a `"counts"` operator and hands
+it to its own objective factorizer. Adding a sixth method is one registration,
+not a new code path, because dispatch reads the method record rather than
+branching on a name. The extending vignette walks that registration step by
+step; this vignette explains what the five built-in operators compute.
+
+Two properties hold across all of them and are worth stating once. The fit is
+deterministic: ids are stored sorted, and each embedding column is sign-fixed so
+its largest-magnitude entry is positive, with no random component anywhere in
+the matrix path, so two fits of the same data return identical matrices. And the
+community readout is uniform: whatever recipe produced the species vectors, a
+plot is placed at the weighted average of the vectors of the species it holds, so
+plot vectors stay comparable across methods.
 
 ## Input and co-occurrence
 
@@ -40,7 +82,8 @@ them.
 species index: presence `P` (plot by species, 0/1) and, when cover is supplied,
 `COV` (plot by species, cover in `[0, 1]`). Duplicate plot-species rows are
 aggregated by the `duplicates` rule (`"max"` by default), and ordinal cover
-scales convert through `cover_scale`.
+scales convert through `cover_scale`. The data vignette covers those readers; we
+use a tiny hand-built table so the operator entries stay checkable by eye.
 
 ```{r data}
 df <- data.frame(
@@ -52,31 +95,56 @@ x <- specvec(df, "plot", "species", abundance = "cover")
 x
 ```
 
-The raw co-occurrence count of two species is the number of plots holding both,
-which is `crossprod(P)`. The diagonal is each species' occurrence count.
+The raw co-occurrence count of two species is the number of plots holding both.
+For the presence matrix `P` that count is `crossprod(P)`: entry `[a, b]` sums the
+plots where both `a` and `b` are present, and the diagonal `[a, a]` is the
+occurrence count of `a`. `cooc_matrix()` returns this operator directly.
 
-## AbundPMI, the default
+```{r cooc-counts}
+Cc <- cooc_matrix(x, "counts", min_occurrence = 1)
+as.matrix(Cc)
+```
 
-AbundPMI is pointwise mutual information computed on a cover-weighted
-co-occurrence operator. Writing `W = sqrt(COV)` element-wise:
+Reading the diagonal gives the occurrence counts: A is in three plots, B in
+three, C in two. The off-diagonal `[A, B]` is 2, the two plots (p1, p2) where A
+and B both occur. This counts matrix is the raw operand. Everything downstream is
+a transform of it or a cover-weighted analogue of it.
+
+## AbundPMI in full
+
+AbundPMI is the default. It computes pointwise mutual information on a
+cover-weighted co-occurrence operator rather than on raw counts. Writing
+`W = sqrt(COV)` element-wise, the operator and its factorization are:
 
 ```
-A[a, b] = sum_p sqrt(cover[p, a] * cover[p, b])   # = t(W) %*% W, off-diagonal
-f[a]    = A[a, a] = sum_p cover[p, a]             # cover mass of species a
+W       = sqrt(COV)                                element-wise, plot x species
+A       = t(W) %*% W                               species x species
+A[a, b] = sum_p sqrt(cover[p, a] * cover[p, b])    off-diagonal: geometric means
+f[a]    = A[a, a] = sum_p cover[p, a]              diagonal: cover mass of a
 PPMI[a, b] = max( log( A[a, b] * n_plots / (f[a] * f[b]) ), 0 )   for a != b
-emb        = V_k %*% diag(sqrt(Lambda_k))         # top-k eigenpairs of PPMI
+emb        = V_k %*% diag(sqrt(Lambda_k))          top-k eigenpairs of PPMI
 ```
 
-Each co-occurring plot contributes the geometric mean of the two covers, so a
-pair of two abundant species weighs more than a pair where one is a trace. The
-marginal `f[a]` is the total cover of species `a`, the cover-weighted analogue
-of occurrence frequency. Only positive PMI is kept (PPMI), and the diagonal is
-excluded. The operator is symmetric, so the factorization is an eigendecomposition
-scaled by the square roots of the positive eigenvalues.
+Each step has a plain reading. `A = t(W) %*% W` is the cover-weighted
+co-occurrence: a plot where both species occur contributes the geometric mean of
+their two covers, so a pair of two dominant species weighs more than a pair where
+one is a trace. The diagonal `f[a]` is the total cover of species `a` summed over
+plots, the cover-weighted analogue of occurrence frequency. The PPMI transform
+compares the observed association `A[a, b]` against what independent placement
+with those marginals would give, `f[a] * f[b] / n_plots`, takes the log of the
+ratio, and clips anything below zero. Clipping keeps the matrix sparse and
+non-negative, and zeroing the diagonal removes a species' trivial association
+with itself. The result is symmetric, so the factorization is an
+eigendecomposition, and each eigenvector is scaled by the square root of its
+eigenvalue so that dot products in the embedding approximate the PPMI entries.
 
-Plain PMI is the same path with `W = P`, the binary presence matrix. AbundPMI is
-exactly PMI with presence replaced by `sqrt(COV)`, which makes the abundance
-effect a clean A/B comparison.
+The eigen step keeps only the positive eigenvalues. SpecVec asks `RSpectra` for
+the `k` largest algebraic eigenpairs of the sparse operator, falls back to a
+dense symmetric `eigen()` when the sparse solver returns nothing usable, takes
+the eigenvectors whose eigenvalues clear a small positive threshold, and scales
+each by the square root of its eigenvalue. When fewer than `dim` positive
+eigenvalues exist, the remaining columns are filled with zeros so the matrix
+always has the requested width.
 
 ```{r abundpmi}
 emb <- species_embedding(x, method = "abund_pmi", dim = 2, min_occurrence = 1)
@@ -84,60 +152,332 @@ emb
 species_similarity(emb, "A", "B")
 ```
 
-When a dataset has no cover column, `abund_pmi` falls back to presence PMI and
-records that on the object. The cover-weighted operator is also reachable
-directly through `cooc_matrix(x, "abundance_pmi")`.
+### Verifying the formula
 
-## Baselines
+A theory vignette earns its keep by showing the formula and the code agree on a
+case small enough to follow. We take the `[A, B]` entry of the cover-weighted
+PPMI and compute it by hand from the cover values, then compare it against the
+operator SpecVec builds through `cooc_matrix(x, "abundance_pmi")`. The cover
+matrix on the `[0, 1]` scale is the percent values divided by 100.
+
+```{r abundpmi-byhand-cov}
+cov_AB <- rbind(p1 = c(A = 0.80, B = 0.20), p2 = c(A = 0.50, B = 0.50),
+                p3 = c(A = 0.60, B = 0.00), p4 = c(A = 0.00, B = 0.40))
+A_AB <- sum(sqrt(cov_AB[, "A"] * cov_AB[, "B"]))          # off-diagonal A[A,B]
+f_A  <- sum(cov_AB[, "A"]); f_B <- sum(cov_AB[, "B"])     # cover masses
+c(A_AB = A_AB, f_A = f_A, f_B = f_B)
+```
+
+Only p1 and p2 contribute to `A[A, B]`, the two plots where both occur, and each
+contributes the geometric mean of the covers. The marginals `f_A` and `f_B` sum
+each species' cover over all four plots. With `n_plots = 4` the PPMI entry is the
+clipped log-ratio:
+
+```{r abundpmi-byhand-ppmi}
+n_plots  <- 4
+ppmi_AB  <- max(log(A_AB * n_plots / (f_A * f_B)), 0)
+ppmi_AB
+```
+
+Now the same entry from the package operator. `cooc_matrix(x, "abundance_pmi")`
+returns the symmetric PPMI matrix over the kept species, and reading `[A, B]`
+recovers the hand value.
+
+```{r abundpmi-check}
+M <- cooc_matrix(x, "abundance_pmi", min_occurrence = 1)
+as.matrix(M)["A", "B"]
+all.equal(as.numeric(as.matrix(M)["A", "B"]), ppmi_AB)
+```
+
+The two match, which confirms the operator the code builds is the operator the
+formula describes. The same identity holds for every off-diagonal entry; we
+checked one pair because one pair is enough to pin the formula.
+
+## PMI against AbundPMI as an A/B
+
+Plain PMI runs the identical path with `W = P`, the binary presence matrix. The
+association becomes `A = t(P) %*% P`, the raw co-occurrence counts from the first
+section, and the marginal `f[a]` becomes the occurrence count rather than the
+cover mass. AbundPMI is exactly plain PMI with presence replaced by `sqrt(COV)`,
+which is why abundance enters as a clean A/B comparison rather than a fork:
+swap the operand, keep the transform and the factorization. The cover-free
+operator is reachable through `cooc_matrix(x, "ppmi")`, and the two operators
+differ on data that carries cover.
+
+```{r ab-operators}
+P_ppmi <- as.matrix(cooc_matrix(x, "ppmi", min_occurrence = 1))
+A_ppmi <- as.matrix(cooc_matrix(x, "abundance_pmi", min_occurrence = 1))
+round(rbind(presence = P_ppmi["A", ], cover = A_ppmi["A", ]), 3)
+```
+
+The two rows give species A's PPMI to every species under presence weighting and
+under cover weighting. They diverge because the cover operand replaces a yes/no
+co-occurrence with the geometric mean of the two covers, so a pair that shares
+cover-heavy plots gets pulled together harder than a pair that merely shares the
+plot list. Fitting both methods produces different embeddings from the same data.
+
+```{r ab-fit}
+emb_pmi <- species_embedding(x, method = "pmi",       dim = 2, min_occurrence = 1)
+emb_abp <- species_embedding(x, method = "abund_pmi", dim = 2, min_occurrence = 1)
+c(pmi = species_similarity(emb_pmi, "A", "B"),
+  abund_pmi = species_similarity(emb_abp, "A", "B"))
+```
+
+When a dataset carries no cover column, `abund_pmi` has no `COV` to take the
+square root of, so it falls back to presence PMI and records that on the object
+with a message. The geometric-mean weighting is the whole of the abundance
+treatment: with cover it sharpens the operator, without cover it is plain PMI.
+
+## Factorization details
+
+The eigen factorization is shared by the three `"sym"` methods. It decomposes the
+symmetric operator, keeps the eigenpairs with positive eigenvalues, and scales
+each eigenvector by the square root of its eigenvalue. The square-root scaling is
+what makes the inner product of two species vectors approximate the
+corresponding operator entry, since the operator equals `V Lambda V'` and
+`(V Lambda^{1/2})(V Lambda^{1/2})' = V Lambda V'`. The solver path is
+sparse-first with a dense fallback: SpecVec calls `RSpectra::eigs_sym` for the
+top algebraic eigenvalues, and if that returns nothing finite and positive it
+densifies the operator, symmetrizes it against numerical drift, and runs base
+`eigen()`. Columns beyond the count of positive eigenvalues are zero-padded, so
+the returned matrix always has the requested `dim` even when the operator has low
+rank.
+
+```{r eigen-dim}
+emb6 <- species_embedding(x, method = "abund_pmi", dim = 6, min_occurrence = 1)
+dim(emb6$V)
+```
+
+Here three kept species admit at most two positive eigenvalues, so columns three
+through six are zeros padded to fill the requested width. The leading columns
+carry the largest eigenvalues, so the first two dimensions hold the dominant
+gradient and a projection onto them is a readable map.
+
+Truncating to the top `dim` eigenpairs is a low-rank approximation of the
+operator. The full PPMI matrix has as many positive eigenvalues as it has rank,
+and keeping the largest ones retains the directions along which species
+associations vary most. A continental dataset has thousands of species and a
+PPMI operator of high rank, so the choice of `dim` trades fidelity against size:
+a larger `dim` reconstructs the operator more closely and a smaller one keeps the
+embedding compact. The eigenvalues decay, so the first few dozen dimensions
+usually carry most of the structure, which is why a few dozen dimensions stand in
+for thousands of raw species columns. The square-root scaling on each retained
+eigenvector then weights a dimension by how much association it explains, so the
+leading dimensions dominate any distance or cosine computed on the vectors.
+
+The sign convention makes the result deterministic. Eigenvectors and singular
+vectors are unique only up to sign, so SpecVec flips each embedding column to put
+its largest-magnitude entry positive. The flip is magnitude-invariant, so dot
+products and cosines are unchanged, and it uses no random number, so two fits of
+the same data return byte-identical matrices.
+
+```{r determinism}
+e1 <- species_embedding(x, method = "abund_pmi", dim = 2, min_occurrence = 1)
+e2 <- species_embedding(x, method = "abund_pmi", dim = 2, min_occurrence = 1)
+identical(e1$V, e2$V)
+max(abs(e1$V - e2$V))
+```
+
+## Correspondence analysis (ca)
 
 `ca` is correspondence analysis: the singular value decomposition of the
-chi-square residuals of the plot-by-species contingency table. SpecVec applies it
-through matrix-vector products, so the dense contingency table is never formed.
-`pmi` is the presence version of AbundPMI above. `glove` is the GloVe
-objective-factorizer from `text2vec` (an optional dependency); it brings its own
-weighted least-squares loss and bias terms, and reads species vectors from the
-sum of its two weight matrices.
+chi-square residuals of the plot-by-species contingency table. The residual at
+cell `[p, s]` is the observed count minus its independence expectation, divided
+by the square root of the expectation, the standard chi-square standardization.
+A dense version would form that residual matrix and take its SVD. SpecVec takes
+the SVD without ever forming it. The weighting returns two closures, one applying
+the residual matrix to a vector and one applying its transpose, built from the
+row sums, column sums, and the sparse contingency. `RSpectra::svds` drives the
+decomposition through those matrix-vector products, and a readout maps the right
+singular vectors to species coordinates by dividing out the column scaling and
+multiplying by the singular values. The operator carries `kind = "implicit"`,
+which is what routes it to `svd` rather than `eigen`.
 
-```{r methods}
-specvec_methods()
+```{r ca}
+emb_ca <- species_embedding(x, method = "ca", dim = 2, min_occurrence = 1)
+emb_ca
+nearest_species(emb_ca, "A", n = 2)
 ```
+
+The implicit route is the reason `ca` scales: a continental contingency table
+has tens of thousands of species columns, and densifying its residual matrix is
+the step that would not fit in memory. Driving the SVD through closures keeps the
+contingency sparse throughout. `ca` is the reference method the benchmark scores
+the others against.
+
+## GloVe (glove)
+
+`glove` is the one objective-factorizer. Rather than decomposing a prepared
+matrix, it minimizes a weighted least-squares loss directly on the raw
+co-occurrence counts. Each species gets a vector and a bias, and the loss asks
+the dot product of two species vectors plus their biases to match the log of
+their co-occurrence count, with a weighting function that caps the influence of
+the most common pairs at a cutoff `x_max`. The fit runs by stochastic gradient
+descent, and the species vector is the sum of the two weight matrices the
+optimizer learns. The operator GloVe consumes is `kind = "counts"`, the raw
+co-occurrence matrix, and the loss and bias terms live inside the factorizer
+rather than in a prepared operand.
+
+GloVe needs the `text2vec` package, a Suggests dependency, for its solver. When
+`text2vec` is absent and `method = "glove"` is forced, the fit stops with a clean
+message pointing at the missing package; inside `compare_embeddings()` the method
+is skipped with a note rather than failing the whole comparison. The chunk below
+runs the fit only when `text2vec` is installed, so the vignette knits either way.
+
+```{r glove, eval = requireNamespace("text2vec", quietly = TRUE)}
+emb_glove <- species_embedding(x, method = "glove", dim = 2, min_occurrence = 1,
+                               glove_iter = 50)
+dim(emb_glove$V)
+```
+
+Because GloVe brings its own loss, it sits apart from the eigen and SVD methods:
+those read vectors out of a fixed matrix, GloVe searches for vectors that fit an
+objective. It is the registry's example of an objective factorization, which is
+why its `kind` is `"objective"` and it accepts the raw counts operand directly.
+
+## The compositional fork (clr)
+
+`clr` takes the other route to abundance. Rather than weighting co-occurrence by
+cover, it treats each plot as a composition and works in Aitchison geometry. The
+species operator is the centered-log-ratio covariance, and it is estimated
+without imputing zeros into the full plot-by-species table. The estimation runs
+in two steps. First the variation matrix:
+
+```
+T[i, j] = Var_p( log( cover[p, i] / cover[p, j] ) )   over plots where both occur
+```
+
+`T[i, j]` is the variance of the log-ratio of the two species' covers, taken over
+the plots where both are present. A pair seen together in fewer than two plots
+has no defined log-ratio variance, and those cells are filled with the largest
+observed variation, the compositionally most dissimilar value. Estimating each
+pair on its own co-present plot set, rather than zero-filling the whole table, is
+the approximation SparCC makes, and it is what lets the operator be built from
+sparse data. Second the double-centering that turns the variation matrix into a
+covariance:
+
+```
+G = -1/2 * J T J     with    J = I - 11'/S
+```
+
+This is the distance-to-Gram identity. Because `clr_i - clr_j =
+log(cover_i / cover_j)`, the variation matrix satisfies `T[i, j] = G_ii + G_jj -
+2 G_ij`, and double-centering inverts that relation to recover the CLR covariance
+`G`. The centering is done as row-and-column-mean subtraction, an order
+`S`-squared operation, so no dense matrix product is formed. The result is
+symmetric and dense, and unlike a PPMI operator it can carry negative entries,
+since a covariance has no non-negativity constraint. That genuinely different
+operand is why `clr` registers through the capability machinery as its own
+`"sym"` weighting rather than reusing the PMI path: it produces a symmetric
+matrix `eigen` can take, filled from a compositional model of its own.
+
+```{r clr}
+emb_clr <- species_embedding(x, method = "clr", dim = 2, min_occurrence = 1)
+emb_clr
+nearest_species(emb_clr, "A", n = 2)
+```
+
+The two abundance routes were settled by benchmark. On the neutral co-occurrence
+metrics the cover-weighted PMI operand recovers more held-out signal than the
+compositional one at the sparsity of continental vegetation data: `abund_pmi`
+leads `clr` on both held-out raw co-occurrence and link-prediction AUC, while
+`clr` scores close to correspondence analysis, and habitat recovery is a
+near-tie. `abund_pmi` stays the default, and `clr` is available for the
+compositional treatment when a study wants Aitchison geometry. The benchmark
+vignette reports the comparison; the exact numbers depend on the sample.
+
+The compositional operator is reached through `species_embedding(method = "clr")`
+rather than `cooc_matrix()`, whose `weighting` argument exposes the four
+co-occurrence operators (`counts`, `ppmi`, `abundance_pmi`, `chi_square`). The
+CLR covariance is built inside the `clr` method when an embedding is fit.
 
 ## Rare-species filter and determinism
 
-`min_occurrence` drops species seen in fewer than that many plots before the
-operator is built, since singletons give unstable vectors. `min_cooccurrence`
-prunes rare species pairs. Both are recorded on the fitted object.
+Two controls shape the operator before it is built. `min_occurrence` drops
+species seen in fewer than that many plots, since a species present once or twice
+gives an unstable vector that adds noise without structure. The drop happens
+before the operator is built, so every method sees the same surviving species and
+the operator is square over them. `min_cooccurrence` prunes species pairs that
+share fewer than that many plots, which thins the operator's off-diagonal where a
+single shared plot would otherwise create a spurious edge. Both cutoffs are
+recorded on the fitted object under `preprocessing`, so an embedding reports the
+filtering that produced it.
 
-Eigen and SVD vectors are unique only up to sign. SpecVec fixes the sign of each
-embedding column so its largest-magnitude entry is positive, which is
-deterministic and leaves dot products and cosines unchanged. Two fits of the same
-data return identical matrices.
+```{r filter}
+emb$preprocessing[c("min_occurrence", "min_cooccurrence",
+                    "n_species_kept", "n_species_total")]
+```
+
+The reason a rare species hurts the estimate is in the PMI formula. The marginal
+`f[a]` of a species seen once is tiny, so the ratio `A[a, b] * n_plots / (f[a] *
+f[b])` is dominated by that small denominator, and a single shared plot can
+inflate the log into a large positive PMI that reflects one accident of sampling.
+Dropping species below `min_occurrence` removes those unstable rows before the
+operator is formed, which steadies the spectrum the factorization reads. The
+default of five plots is the value the benchmark settled on for continental data;
+the tiny examples in this vignette lower it to one so every species survives.
+
+Determinism follows from the sign convention shown earlier and from sorted ids.
+Species are stored in sorted order, the operator is built in that order, and each
+column is sign-fixed to put its largest-magnitude entry positive. None of these
+steps draws a random number, so a refit reproduces the previous matrix exactly.
+The one method with a stochastic solver is `glove`, whose SGD path is seeded by
+`text2vec`; the matrix methods are deterministic by construction.
 
 ## Community pooling
 
 A community embedding places each plot in the species space by pooling the
-vectors of the species it contains:
+vectors of the species it contains. The readout is a weighted average:
 
 ```
 U[p, ] = sum_s w[p, s] * V[s, ] / sum_s w[p, s]
 ```
 
-With `weights = "cover"` (the default when cover is present) the weights are
-cover; with `weights = "presence"` they are 0/1, giving the plain mean of the
-present species' vectors. `community_similarity()` and `community_novelty()`
-operate on these plot vectors.
+With `weights = "cover"` (the default when cover is present) the weights are the
+plot's cover values, so a dominant species steers the plot vector toward its own
+corner of the space. With `weights = "presence"` the weights are 0/1, giving the
+plain mean of the present species' vectors, where every present species gets an
+equal vote regardless of how much ground it covers. Comparing the two placements
+of a plot shows how much abundance, rather than the species list alone, is
+shaping its position.
 
 ```{r community}
-comm <- community_embedding(x, embedding = emb, weights = "cover")
-comm
+comm      <- community_embedding(x, embedding = emb, weights = "cover")
+comm_pres <- community_embedding(x, embedding = emb, weights = "presence")
+round(rbind(cover = comm$U["p1", ], presence = comm_pres$U["p1", ]), 3)
 ```
 
-## The benchmark verdict
+The readout is identical across methods. Whether the species vectors came from
+`abund_pmi`, `ca`, `glove`, or `clr`, a plot is the weighted average of its
+species, so plot vectors stay comparable no matter which recipe built the species
+space underneath. Keeping the community step uniform is a deliberate choice: it
+means a study can change the species recipe and still read plot similarities,
+novelty, and trajectories the same way. The downstream community verbs,
+`community_similarity()` and `community_novelty()`, operate on these plot
+vectors, and the communities vignette covers them.
+
+## Comparison to alternatives and the benchmark verdict
+
+The operator-to-factorization view differs from running a single fixed
+ordination. A classical analysis fixes one transform and one decomposition, for
+instance the chi-square residual SVD that `ca` reproduces, and reports its
+coordinates. SpecVec keeps the transform and the decomposition as separate,
+swappable registry entries, so a modelling choice is a choice of operand and the
+factorization follows from the operand's kind. The same eigen solver reads
+vectors out of presence PMI, cover-weighted PMI, and the CLR covariance, because
+all three present a symmetric matrix; correspondence analysis differs by
+presenting an implicit operand instead. The grid view is what makes the abundance
+question a clean A/B, the compositional route a registered sibling rather than a
+rewrite, and a new idea a single registration.
 
 `compare_embeddings()` scores the methods under one protocol and decides a winner
-by a rule fixed before the results are seen: a method beats the reference only if
-it exceeds it on both neutral co-occurrence metrics (held-out raw Spearman and
-link-prediction AUC) by more than two pooled standard deviations. The companion
-vignette `vignette("specvec-benchmark")` runs it. On continental vegetation data
-this verdict selects `abund_pmi`, and its lead over correspondence analysis grows
-with the number of plots.
+by a rule fixed before the results are seen. A method beats the reference (`ca`
+by default) only if it exceeds it on both neutral co-occurrence metrics, held-out
+raw Spearman and link-prediction AUC, by more than two pooled standard
+deviations. Fixing the criterion in advance keeps the comparison honest: there is
+no scanning for the metric on which a favoured method happens to look best, and a
+method that ties, or wins one metric while tying the other, is reported as
+`partial` or `no advantage` rather than promoted. The companion vignette
+`vignette("specvec-benchmark")` runs it in full, including the optional `glove`
+method. On continental vegetation data this verdict selects `abund_pmi`, and its
+lead over correspondence analysis widens with the number of plots.
