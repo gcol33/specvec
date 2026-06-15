@@ -1,5 +1,54 @@
 # Changelog
 
+## specvec 0.3.0
+
+Alien integration, and a compositional method for the abundance fork.
+
+### Integration trajectories
+
+- [`integration_trajectory()`](https://gcol33.github.io/specvec/reference/integration_trajectory.md)
+  reports a focal neophyte’s distance to the native-community centroid
+  per time window, in one fixed embedding frame. The neophyte is placed
+  by
+  [`species_trajectory()`](https://gcol33.github.io/specvec/reference/species_trajectory.md)
+  at the cover-weighted centroid of the species it co-occurs with; the
+  native community is placed by pooling its plots in the same frame; the
+  readout is the distance between them. A falling distance is
+  integration. `native =` names the target community (defaults to the
+  resident pool); `frame =` fixes the coordinate system so the pole the
+  neophyte arrives from stays represented. Restrict the input to
+  resampled (ReSurvey) plots before building the object so the same
+  locations are tracked through time. See
+  [`vignette("specvec-integration")`](https://gcol33.github.io/specvec/articles/specvec-integration.md).
+
+### Compositional method
+
+- `clr` adds the compositional route to abundance (the research fork of
+  the methods grid): each plot is a composition, and the species
+  operator is the centered-log-ratio covariance estimated from the
+  variation matrix of pairwise log-ratios, double-centered. It registers
+  through the same `(weighting, factorization)` machinery as the other
+  methods. On the neutral co-occurrence metrics the cover-weighted PMI
+  operand (`abund_pmi`) recovers more held-out signal, so it stays the
+  default; `clr` is available for users who want the compositional
+  treatment.
+  [`vignette("specvec-methods")`](https://gcol33.github.io/specvec/articles/specvec-methods.md)
+  describes it.
+
+### API
+
+- The query verbs now share one calling convention. The object queried
+  is `x` in all of them: `nearest_species(x, ...)`,
+  `species_similarity(x, ...)`, `community_similarity(x, ...)`,
+  `community_novelty(x, ...)` (was `emb` / `object`). In
+  [`species_similarity()`](https://gcol33.github.io/specvec/reference/species_similarity.md)
+  the focal and comparison species are `species` and `to` (was `a` and
+  `b`), matching `nearest_species(x, species)`. Positional calls are
+  unaffected.
+- `as_specvec()` is removed;
+  [`specvec()`](https://gcol33.github.io/specvec/reference/specvec.md)
+  is the single constructor.
+
 ## specvec 0.2.0
 
 Temporal embeddings: track how species and communities move through

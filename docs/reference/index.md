@@ -5,9 +5,8 @@
 Build a specvec object from a long plot-species table and convert cover
 scales.
 
-- [`specvec()`](https://gcol33.github.io/specvec/reference/specvec.md)
-  [`as_specvec()`](https://gcol33.github.io/specvec/reference/specvec.md)
-  : Build a specvec data object
+- [`specvec()`](https://gcol33.github.io/specvec/reference/specvec.md) :
+  Build a specvec data object
 - [`cover_from_scale()`](https://gcol33.github.io/specvec/reference/cover_from_scale.md)
   : Convert an abundance column to cover-proportion
 - [`register_cover_scale()`](https://gcol33.github.io/specvec/reference/register_cover_scale.md)
@@ -48,6 +47,15 @@ fixed frame.
   : Community trajectory and novelty over time
 - [`as.data.frame(`*`<specvec_trajectory>`*`)`](https://gcol33.github.io/specvec/reference/as.data.frame.specvec_trajectory.md)
   : Tidy a species trajectory
+
+## Alien integration
+
+Track a neophyte’s distance to the native community over time.
+
+- [`integration_trajectory()`](https://gcol33.github.io/specvec/reference/integration_trajectory.md)
+  : Alien integration trajectory
+- [`as.data.frame(`*`<specvec_integration>`*`)`](https://gcol33.github.io/specvec/reference/as.data.frame.specvec_integration.md)
+  : Tidy an integration trajectory
 
 ## Benchmark
 

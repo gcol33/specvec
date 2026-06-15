@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">specvec</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,6 +46,26 @@
       <small>Source: <a href="https://github.com/gcol33/specvec/blob/HEAD/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.3.0" id="specvec-030">specvec 0.3.0<a class="anchor" aria-label="anchor" href="#specvec-030"></a></h2>
+<p>Alien integration, and a compositional method for the abundance fork.</p>
+<div class="section level3">
+<h3 id="integration-trajectories-0-3-0">Integration trajectories<a class="anchor" aria-label="anchor" href="#integration-trajectories-0-3-0"></a></h3>
+<ul><li>
+<code><a href="../reference/integration_trajectory.html">integration_trajectory()</a></code> reports a focal neophyte’s distance to the native-community centroid per time window, in one fixed embedding frame. The neophyte is placed by <code><a href="../reference/species_trajectory.html">species_trajectory()</a></code> at the cover-weighted centroid of the species it co-occurs with; the native community is placed by pooling its plots in the same frame; the readout is the distance between them. A falling distance is integration. <code>native =</code> names the target community (defaults to the resident pool); <code>frame =</code> fixes the coordinate system so the pole the neophyte arrives from stays represented. Restrict the input to resampled (ReSurvey) plots before building the object so the same locations are tracked through time. See <code><a href="../articles/specvec-integration.html">vignette("specvec-integration")</a></code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="compositional-method-0-3-0">Compositional method<a class="anchor" aria-label="anchor" href="#compositional-method-0-3-0"></a></h3>
+<ul><li>
+<code>clr</code> adds the compositional route to abundance (the research fork of the methods grid): each plot is a composition, and the species operator is the centered-log-ratio covariance estimated from the variation matrix of pairwise log-ratios, double-centered. It registers through the same <code>(weighting, factorization)</code> machinery as the other methods. On the neutral co-occurrence metrics the cover-weighted PMI operand (<code>abund_pmi</code>) recovers more held-out signal, so it stays the default; <code>clr</code> is available for users who want the compositional treatment. <code><a href="../articles/specvec-methods.html">vignette("specvec-methods")</a></code> describes it.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="api-0-3-0">API<a class="anchor" aria-label="anchor" href="#api-0-3-0"></a></h3>
+<ul><li>The query verbs now share one calling convention. The object queried is <code>x</code> in all of them: <code>nearest_species(x, ...)</code>, <code>species_similarity(x, ...)</code>, <code>community_similarity(x, ...)</code>, <code>community_novelty(x, ...)</code> (was <code>emb</code> / <code>object</code>). In <code><a href="../reference/species_similarity.html">species_similarity()</a></code> the focal and comparison species are <code>species</code> and <code>to</code> (was <code>a</code> and <code>b</code>), matching <code>nearest_species(x, species)</code>. Positional calls are unaffected.</li>
+<li>
+<code>as_specvec()</code> is removed; <code><a href="../reference/specvec.html">specvec()</a></code> is the single constructor.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="specvec-020">specvec 0.2.0<a class="anchor" aria-label="anchor" href="#specvec-020"></a></h2>
 <p>Temporal embeddings: track how species and communities move through time.</p>

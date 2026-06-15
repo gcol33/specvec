@@ -5,23 +5,23 @@ Similarity of one species to another, or to all species.
 ## Usage
 
 ``` r
-species_similarity(emb, a, b = NULL, metric = c("cosine", "euclidean"))
+species_similarity(x, species, to = NULL, metric = c("cosine", "euclidean"))
 ```
 
 ## Arguments
 
-- emb:
+- x:
 
   A `specvec_embedding`.
 
-- a:
+- species:
 
   Focal species id.
 
-- b:
+- to:
 
   Optional second species id; if `NULL`, returns the named similarity
-  (cosine) or distance (euclidean) of `a` to every species.
+  (cosine) or distance (euclidean) of `species` to every species.
 
 - metric:
 
@@ -29,4 +29,4 @@ species_similarity(emb, a, b = NULL, metric = c("cosine", "euclidean"))
 
 ## Value
 
-A scalar when `b` is supplied, otherwise a named numeric vector.
+A scalar when `to` is supplied, otherwise a named numeric vector.

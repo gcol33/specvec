@@ -7,12 +7,12 @@ high.
 ## Usage
 
 ``` r
-community_novelty(object, reference, k = 5L)
+community_novelty(x, reference, k = 5L)
 ```
 
 ## Arguments
 
-- object:
+- x:
 
   A `specvec_community` (the plots to score).
 

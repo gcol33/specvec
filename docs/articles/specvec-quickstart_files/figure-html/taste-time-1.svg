@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='504.00pt' height='230.40pt' viewBox='0 0 504.00 230.40'>
+<g class='svglite'>
+<defs>
+  <style type='text/css'><![CDATA[
+    /* theme-aware-processed */
+    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite circle {
+      fill: none;
+      stroke: #3E3F3A;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    .svglite > g > rect {
+      fill: none;
+      stroke: #3E3F3A;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    .svglite text {
+      white-space: pre;
+      fill: #3E3F3A;
+    }
+    .svglite g.glyphgroup path {
+      fill: inherit;
+      stroke: none;
+    }
+  ]]></style>
+</defs>
+<rect width='100%' height='100%' style='stroke: none; fill: #F5F6F8;'/>
+<defs>
+  <clipPath id='cpMC4wMHw1MDQuMDB8MC4wMHwyMzAuNDA='>
+    <rect x='0.00' y='0.00' width='504.00' height='230.40' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwyMzAuNDA=)'>
+</g>
+<defs>
+  <clipPath id='cpNTkuMDR8NDczLjc2fDU5LjA0fDE1Ni45Ng=='>
+    <rect x='59.04' y='59.04' width='414.72' height='97.92' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpNTkuMDR8NDczLjc2fDU5LjA0fDE1Ni45Ng==)'>
+<line x1='81.37' y1='64.48' x2='259.43' y2='110.92' style='stroke-width: 0.75;' />
+<line x1='273.44' y1='114.22' x2='451.36' y2='151.84' style='stroke-width: 0.75;' />
+<circle cx='74.40' cy='62.67' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
+<circle cx='266.40' cy='112.73' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
+<circle cx='458.40' cy='153.33' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
+</g>
+<g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwyMzAuNDA=)'>
+<line x1='74.40' y1='156.96' x2='458.40' y2='156.96' style='stroke-width: 0.75;' />
+<line x1='74.40' y1='156.96' x2='74.40' y2='164.16' style='stroke-width: 0.75;' />
+<line x1='170.40' y1='156.96' x2='170.40' y2='164.16' style='stroke-width: 0.75;' />
+<line x1='266.40' y1='156.96' x2='266.40' y2='164.16' style='stroke-width: 0.75;' />
+<line x1='362.40' y1='156.96' x2='362.40' y2='164.16' style='stroke-width: 0.75;' />
+<line x1='458.40' y1='156.96' x2='458.40' y2='164.16' style='stroke-width: 0.75;' />
+<text x='74.40' y='182.88' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>1990</text>
+<text x='170.40' y='182.88' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>1995</text>
+<text x='266.40' y='182.88' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2000</text>
+<text x='362.40' y='182.88' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2005</text>
+<text x='458.40' y='182.88' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2010</text>
+<line x1='59.04' y1='153.33' x2='59.04' y2='68.58' style='stroke-width: 0.75;' />
+<line x1='59.04' y1='153.33' x2='51.84' y2='153.33' style='stroke-width: 0.75;' />
+<line x1='59.04' y1='139.21' x2='51.84' y2='139.21' style='stroke-width: 0.75;' />
+<line x1='59.04' y1='125.08' x2='51.84' y2='125.08' style='stroke-width: 0.75;' />
+<line x1='59.04' y1='110.96' x2='51.84' y2='110.96' style='stroke-width: 0.75;' />
+<line x1='59.04' y1='96.83' x2='51.84' y2='96.83' style='stroke-width: 0.75;' />
+<line x1='59.04' y1='82.71' x2='51.84' y2='82.71' style='stroke-width: 0.75;' />
+<line x1='59.04' y1='68.58' x2='51.84' y2='68.58' style='stroke-width: 0.75;' />
+<text transform='translate(41.76,153.33) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>0.0</text>
+<text transform='translate(41.76,125.08) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>0.2</text>
+<text transform='translate(41.76,96.83) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>0.4</text>
+<text transform='translate(41.76,68.58) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>0.6</text>
+<polygon points='59.04,156.96 473.76,156.96 473.76,59.04 59.04,59.04 ' style='stroke-width: 0.75;' />
+<text x='266.40' y='34.67' text-anchor='middle' style='font-size: 14.40px; font-weight: bold; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='300.73px' lengthAdjust='spacingAndGlyphs'>Focal species moving through a fixed frame</text>
+<text x='266.40' y='211.68' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='39.36px' lengthAdjust='spacingAndGlyphs'>decade</text>
+<text transform='translate(12.96,108.00) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='63.34px' lengthAdjust='spacingAndGlyphs'>frame dim 1</text>
+</g>
+</g>
+</svg>

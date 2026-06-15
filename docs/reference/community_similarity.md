@@ -6,16 +6,12 @@ reference set.
 ## Usage
 
 ``` r
-community_similarity(
-  object,
-  reference = NULL,
-  metric = c("cosine", "euclidean")
-)
+community_similarity(x, reference = NULL, metric = c("cosine", "euclidean"))
 ```
 
 ## Arguments
 
-- object:
+- x:
 
   A `specvec_community`.
 
@@ -31,4 +27,4 @@ community_similarity(
 
 ## Value
 
-A matrix of `object` rows by `reference` rows.
+A matrix of `x` rows by `reference` rows.

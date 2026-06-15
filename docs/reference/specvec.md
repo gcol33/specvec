@@ -21,18 +21,6 @@ specvec(
   duplicates = c("max", "sum", "first", "error"),
   cover_mapping = NULL
 )
-
-as_specvec(
-  data,
-  plot,
-  species,
-  abundance = NULL,
-  time = NULL,
-  labels = NULL,
-  cover_scale = c("percent", "proportion", "braun_blanquet"),
-  duplicates = c("max", "sum", "first", "error"),
-  cover_mapping = NULL
-)
 ```
 
 ## Arguments

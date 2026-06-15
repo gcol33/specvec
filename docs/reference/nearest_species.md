@@ -6,12 +6,12 @@ demo function: ask which species an embedding places next to Robinia.
 ## Usage
 
 ``` r
-nearest_species(emb, species, n = 10L, metric = c("cosine", "euclidean"))
+nearest_species(x, species, n = 10L, metric = c("cosine", "euclidean"))
 ```
 
 ## Arguments
 
-- emb:
+- x:
 
   A `specvec_embedding`.
 
