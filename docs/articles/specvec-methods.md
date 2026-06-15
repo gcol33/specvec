@@ -1,0 +1,154 @@
+# Methods: from plots to embeddings
+
+``` r
+
+library(specvec)
+```
+
+This vignette defines the maths SpecVec runs. Every method follows one
+pipeline:
+
+    plot x species (+ cover)
+            |
+            v
+       co-occurrence operator        (counts, PMI, cover-weighted PMI, or chi-square)
+            |
+            v
+       factorization                 (eigen, implicit SVD, or GloVe)
+            |
+            v
+       species vectors  ->  community vectors (pooled)
+
+A method is a registered `(weighting, factorization)` pair. `ca`, `pmi`,
+`abund_pmi`, and `glove` are points on this grid, and
+[`specvec_methods()`](https://gcol33.github.io/specvec/reference/specvec_methods.md)
+lists them.
+
+## Input and co-occurrence
+
+[`specvec()`](https://gcol33.github.io/specvec/reference/specvec.md)
+reads a long table and builds two sparse matrices over a sorted species
+index: presence `P` (plot by species, 0/1) and, when cover is supplied,
+`COV` (plot by species, cover in `[0, 1]`). Duplicate plot-species rows
+are aggregated by the `duplicates` rule (`"max"` by default), and
+ordinal cover scales convert through `cover_scale`.
+
+``` r
+
+df <- data.frame(
+  plot    = c("p1","p1","p2","p2","p3","p3","p4","p4"),
+  species = c("A","B","A","B","A","C","B","C"),
+  cover   = c(80, 20, 50, 50, 60, 40, 40, 60)
+)
+x <- specvec(df, "plot", "species", abundance = "cover")
+x
+#> <specvec_data> plots=4  species=3
+#>   presence: nnz=8  density=66.6667%
+#>   abundance: yes (cover_scale=percent)  duplicates=max
+```
+
+The raw co-occurrence count of two species is the number of plots
+holding both, which is `crossprod(P)`. The diagonal is each species’
+occurrence count.
+
+## AbundPMI, the default
+
+AbundPMI is pointwise mutual information computed on a cover-weighted
+co-occurrence operator. Writing `W = sqrt(COV)` element-wise:
+
+    A[a, b] = sum_p sqrt(cover[p, a] * cover[p, b])   # = t(W) %*% W, off-diagonal
+    f[a]    = A[a, a] = sum_p cover[p, a]             # cover mass of species a
+    PPMI[a, b] = max( log( A[a, b] * n_plots / (f[a] * f[b]) ), 0 )   for a != b
+    emb        = V_k %*% diag(sqrt(Lambda_k))         # top-k eigenpairs of PPMI
+
+Each co-occurring plot contributes the geometric mean of the two covers,
+so a pair of two abundant species weighs more than a pair where one is a
+trace. The marginal `f[a]` is the total cover of species `a`, the
+cover-weighted analogue of occurrence frequency. Only positive PMI is
+kept (PPMI), and the diagonal is excluded. The operator is symmetric, so
+the factorization is an eigendecomposition scaled by the square roots of
+the positive eigenvalues.
+
+Plain PMI is the same path with `W = P`, the binary presence matrix.
+AbundPMI is exactly PMI with presence replaced by `sqrt(COV)`, which
+makes the abundance effect a clean A/B comparison.
+
+``` r
+
+emb <- species_embedding(x, method = "abund_pmi", dim = 2, min_occurrence = 1)
+emb
+#> <specvec_embedding> method=abund_pmi  dim=2  species=3
+#>   weighting=abundance_pmi  factorization=eigen
+#>   kept 3/3 species (min_occurrence=1, min_cooccurrence=1)  plots=4
+species_similarity(emb, "A", "B")
+#> [1] 1
+```
+
+When a dataset has no cover column, `abund_pmi` falls back to presence
+PMI and records that on the object. The cover-weighted operator is also
+reachable directly through `cooc_matrix(x, "abundance_pmi")`.
+
+## Baselines
+
+`ca` is correspondence analysis: the singular value decomposition of the
+chi-square residuals of the plot-by-species contingency table. SpecVec
+applies it through matrix-vector products, so the dense contingency
+table is never formed. `pmi` is the presence version of AbundPMI above.
+`glove` is the GloVe objective-factorizer from `text2vec` (an optional
+dependency); it brings its own weighted least-squares loss and bias
+terms, and reads species vectors from the sum of its two weight
+matrices.
+
+``` r
+
+specvec_methods()
+#> [1] "abund_pmi" "ca"        "glove"     "pmi"
+```
+
+## Rare-species filter and determinism
+
+`min_occurrence` drops species seen in fewer than that many plots before
+the operator is built, since singletons give unstable vectors.
+`min_cooccurrence` prunes rare species pairs. Both are recorded on the
+fitted object.
+
+Eigen and SVD vectors are unique only up to sign. SpecVec fixes the sign
+of each embedding column so its largest-magnitude entry is positive,
+which is deterministic and leaves dot products and cosines unchanged.
+Two fits of the same data return identical matrices.
+
+## Community pooling
+
+A community embedding places each plot in the species space by pooling
+the vectors of the species it contains:
+
+    U[p, ] = sum_s w[p, s] * V[s, ] / sum_s w[p, s]
+
+With `weights = "cover"` (the default when cover is present) the weights
+are cover; with `weights = "presence"` they are 0/1, giving the plain
+mean of the present species’ vectors.
+[`community_similarity()`](https://gcol33.github.io/specvec/reference/community_similarity.md)
+and
+[`community_novelty()`](https://gcol33.github.io/specvec/reference/community_novelty.md)
+operate on these plot vectors.
+
+``` r
+
+comm <- community_embedding(x, embedding = emb, weights = "cover")
+comm
+#> <specvec_community> plots=4  dim=2  pooling=cover
+#>   from: method=abund_pmi  weighting=abundance_pmi  factorization=eigen
+```
+
+## The benchmark verdict
+
+[`compare_embeddings()`](https://gcol33.github.io/specvec/reference/compare_embeddings.md)
+scores the methods under one protocol and decides a winner by a rule
+fixed before the results are seen: a method beats the reference only if
+it exceeds it on both neutral co-occurrence metrics (held-out raw
+Spearman and link-prediction AUC) by more than two pooled standard
+deviations. The companion vignette
+[`vignette("specvec-benchmark")`](https://gcol33.github.io/specvec/articles/specvec-benchmark.md)
+runs it. On continental vegetation data this verdict selects
+`abund_pmi`, and its lead over correspondence analysis grows with the
+number of plots.

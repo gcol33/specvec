@@ -1,0 +1,10 @@
+pandoc: 3.9.0.2
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  specvec-benchmark: specvec-benchmark.html
+  specvec-methods: specvec-methods.html
+last_built: 2026-06-15T15:58Z
+urls:
+  reference: https://gcol33.github.io/specvec/reference
+  article: https://gcol33.github.io/specvec/articles

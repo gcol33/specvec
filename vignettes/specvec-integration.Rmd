@@ -1,0 +1,146 @@
+---
+title: "Alien integration trajectories"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Alien integration trajectories}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4)
+```
+
+A neophyte arrives in disturbed ground with a ruderal flora and, over decades, may
+settle into the resident native community. `integration_trajectory()` measures
+that settling: it tracks the focal species' distance to the native-community
+centroid through time, in one fixed embedding frame. A falling distance is
+integration -- the neophyte's associates shift from where it arrived toward the
+native community.
+
+```{r setup}
+library(specvec)
+```
+
+## The construction
+
+Everything is read out in a single fixed frame, so the points compare across time
+without alignment (the fixed-frame idea from `vignette("specvec-methods")` and
+`species_trajectory()`):
+
+- The **frame** is fitted once on the resident species pool. The focal neophyte
+  is placed per time window at the cover-weighted centroid of the species it
+  co-occurs with, exactly as `species_trajectory()` does.
+- The **native community** is placed per window at the centroid of its pooled
+  plot embeddings, in the same frame.
+- The trajectory is the distance between the two per window.
+
+## A simulated invasion
+
+The simulation holds a native community as a stable backbone in every decade,
+and lets a focal `"alien"` ride a ruderal flora early and the native flora late,
+so its co-occurrents drift from one to the other.
+
+```{r sim}
+sim_invasion <- function(seed = 1) {
+  set.seed(seed)
+  native  <- paste0("nat", 1:8)
+  ruderal <- paste0("rud", 1:8)
+  decades <- c(1990, 2000, 2010, 2020)
+  rows <- list(); pid <- 0L
+  for (d in seq_along(decades)) {
+    share <- (d - 1) / (length(decades) - 1)      # the neophyte's pull toward natives
+    for (i in 1:120) {                            # plots carrying the neophyte
+      pid <- pid + 1L
+      pool <- if (runif(1) < share) native else ruderal
+      sp <- c(sample(pool, sample(3:6, 1)), "alien")
+      rows[[pid]] <- data.frame(plot = paste0("p", pid), species = sp,
+                                cover = round(runif(length(sp), 5, 90), 1),
+                                decade = decades[d])
+    }
+    for (i in 1:60) {                             # resident native backbone
+      pid <- pid + 1L
+      sp <- sample(native, sample(3:6, 1))
+      rows[[pid]] <- data.frame(plot = paste0("p", pid), species = sp,
+                                cover = round(runif(length(sp), 5, 90), 1),
+                                decade = decades[d])
+    }
+  }
+  do.call(rbind, rows)
+}
+
+df <- sim_invasion()
+x  <- specvec(df, "plot", "species", abundance = "cover", time = "decade")
+x
+```
+
+Trace the neophyte against the native species:
+
+```{r run}
+it <- integration_trajectory(
+  x, species = "alien",
+  native = paste0("nat", 1:8),     # the community it integrates into
+  dim = 16, min_occurrence = 3
+)
+it
+```
+
+The distance falls decade by decade as the neophyte's co-occurrents shift into the
+native community:
+
+```{r plot}
+d <- as.data.frame(it)
+plot(d$center, d$distance, type = "b", pch = 19,
+     xlab = "decade", ylab = "distance to native centroid",
+     main = "alien integration over time")
+```
+
+## Frame and native are two different sets
+
+`integration_trajectory()` separates the coordinate system from the target.
+
+- `frame` defaults to every species except the focal one -- the whole resident
+  pool. Keeping the ruderal pole in the frame is what makes an early position well
+  defined: the neophyte starts among the flora it arrived with, and the motion
+  toward the natives is a real displacement in the space.
+- `native` is the subset whose centroid is the target. It defaults to the whole
+  frame, but for a real measurement you name the native species, so the distance
+  is measured against the community you care about.
+
+Fitting the frame on the native subset alone would erase the ruderal pole, and the
+early position would have nothing to sit at.
+
+## Anchor on resampled plots
+
+Across decades, raw plot data confounds integration with where and what was
+sampled each decade: a shift in the distance could be a shift in the survey, not
+in the species. Restrict the data to **resampled (ReSurvey) plots** before
+building the `specvec` object, so the same locations are followed through time.
+`integration_trajectory()` takes whatever plots it is given and does not hard-code
+a survey-design column; the restriction is yours to apply.
+
+## On your own data
+
+A European Vegetation Archive (EVA) export carries the columns this needs: a
+plot id, a taxon, a cover, a decade, a native/neophyte status, and a ReSurvey
+flag. The native set comes from the status column; the ReSurvey flag selects the
+resampled plots.
+
+```{r eva, eval = FALSE}
+library(data.table)
+sp <- fread("species_export.csv")
+hd <- fread("header_export.csv")                 # plot-level: decade, ReSurvey flag
+
+resurvey <- hd[`ReSurvey plot (Y/N)` == "Y", PlotObservationID]
+sp <- sp[PlotObservationID %in% resurvey]        # follow the same locations
+
+x <- specvec(sp, plot = "PlotObservationID", species = "taxon",
+             abundance = "cover", time = "Decade")
+
+natives <- unique(sp[STATUS == "native", taxon])
+integration_trajectory(x, species = "Robinia pseudoacacia",
+                       native = natives, min_occurrence = 5)
+```
+
+The package carries no vegetation data of its own; the trajectory is meant to run
+on yours.

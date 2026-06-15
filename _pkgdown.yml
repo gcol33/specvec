@@ -1,0 +1,56 @@
+url: https://gcol33.github.io/specvec
+template:
+  bootstrap: 5
+  bootswatch: sandstone
+  includes:
+    in_header: pkgdown/mathjax-config.html
+figures:
+  dev: svglite
+  fig.ext: svg
+  bg: '#F5F6F8'
+reference:
+- title: Data
+  desc: Build a specvec object from a long plot-species table and convert cover scales.
+  contents:
+  - specvec
+  - cover_from_scale
+  - register_cover_scale
+- title: Species embeddings
+  desc: Learn species vectors and query their neighbours.
+  contents:
+  - species_embedding
+  - nearest_species
+  - species_similarity
+  - cooc_matrix
+- title: Community embeddings
+  desc: Place plots in the species space and score novelty.
+  contents:
+  - community_embedding
+  - community_similarity
+  - community_novelty
+- title: Temporal
+  desc: Window embeddings by time and track species and communities through a fixed frame.
+  contents:
+  - species_trajectory
+  - community_trajectory
+  - as.data.frame.specvec_trajectory
+- title: Alien integration
+  desc: Track a neophyte's distance to the native community over time.
+  contents:
+  - integration_trajectory
+  - as.data.frame.specvec_integration
+- title: Benchmark
+  desc: Score embedding methods on your own data.
+  contents: compare_embeddings
+- title: Extend
+  desc: Register new weightings, factorizations, and method presets.
+  contents:
+  - specvec_methods
+  - register_weighting
+  - register_factorization
+  - register_method
+articles:
+- title: Articles
+  contents:
+  - specvec-methods
+  - specvec-benchmark

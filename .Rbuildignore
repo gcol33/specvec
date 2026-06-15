@@ -1,0 +1,12 @@
+^dev_notes$
+^bakeoff$
+^memory$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^\.github$
+^IMPLEMENTATION_PLAN\.md$
+^LICENSE\.md$
+^\.git$
+^\.Rproj\.user$
+^.*\.Rproj$
