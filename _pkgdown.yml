@@ -50,7 +50,19 @@ reference:
   - register_factorization
   - register_method
 articles:
-- title: Articles
+- title: Get started
+  contents:
+  - specvec-quickstart
+  - specvec-data
+- title: Embeddings
   contents:
   - specvec-methods
+  - specvec-communities
   - specvec-benchmark
+- title: Through time
+  contents:
+  - specvec-temporal
+  - specvec-integration
+- title: Extend
+  contents:
+  - specvec-extending

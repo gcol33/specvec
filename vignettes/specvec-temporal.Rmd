@@ -1,0 +1,332 @@
+---
+title: "Tracking species and communities through time"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Tracking species and communities through time}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4)
+```
+
+```{r setup}
+library(specvec)
+```
+
+Vegetation data often arrives stamped with time: plots surveyed across decades,
+a ReSurvey campaign returning to the same locations, a chronosequence read off
+land-use history. The natural question is whether a species or a community has
+moved through compositional space, and where it went. SpecVec answers this with
+two front-door verbs, `species_trajectory()` and `community_trajectory()`, both
+built on one idea: fit a single coordinate system once, then read every time
+window out in that system.
+
+## The cross-time alignment problem
+
+The obvious approach is to embed each decade on its own. Fit one species
+embedding on the 1990s plots, another on the 2010s plots, and compare the two
+coordinate matrices. The approach fails for a numerical reason. An eigendecomposition
+or singular value decomposition returns vectors
+that are unique only up to sign, and when eigenvalues are close, up to rotation
+within the degenerate subspace. SpecVec fixes each column's sign deterministically
+(see `vignette("specvec-methods")`), so refitting the *same* data twice gives the
+same matrix. Two *different* fits carry no such guarantee. The axes of the 1990s
+embedding and the axes of the 2010s embedding are separate bases for separate
+matrices. A species sitting at coordinate `(1.2, -0.4)` in one fit and
+`(1.2, -0.4)` in the other has not necessarily stayed put; the two coordinate
+pairs are written in different languages.
+
+People patch this with Procrustes rotation: find the orthogonal transform that
+best maps one fit onto the other, apply it, then compare. That works when the
+two communities are mostly the same and only a few species moved. It breaks
+exactly when the data are interesting. Procrustes assumes a shared structure to
+align to, so if the species pool itself turned over between decades, the
+alignment absorbs the very signal being measured, and a real compositional shift
+gets rotated away. The rotation is also estimated from the data it then judges,
+which is circular.
+
+The fixed-frame solution sidesteps all of this. One *frame* embedding is fitted
+once, on a stable reference set of species. Each time window is then projected
+into that frame without refitting: a focal species is placed, per window, at the
+cover-weighted centroid of the frame species it co-occurs with in that window.
+The frame never moves, so there is nothing to align. A point in 1990 and a point
+in 2010 are coordinates in the *same* basis, and their difference is a genuine
+displacement. There is no per-window rotation, no Procrustes step, and no
+circularity, because the thing measured (the focal species' position) is never
+part of the thing that defines the axes (the frame).
+
+The data that drives this needs a time column, supplied to `specvec()` at build
+time. The simulation below codes four decades. A focal species rides one species
+pool early and drifts toward a second pool late, while a backbone of unrelated
+plots holds steady throughout.
+
+```{r sim}
+sim_time <- function(seed = 1) {
+  set.seed(seed)
+  a <- paste0("a", 1:8); b <- paste0("b", 1:8)
+  decs <- c(1990, 2000, 2010, 2020)
+  rows <- list(); pid <- 0L
+  for (di in seq_along(decs)) {
+    share <- (di - 1) / (length(decs) - 1)
+    for (i in 1:100) {
+      pid <- pid + 1L
+      pool <- if (runif(1) < share) b else a
+      sp <- c(sample(pool, sample(3:6, 1)), "focal")
+      rows[[pid]] <- data.frame(plot = paste0("p", pid), species = sp,
+                                cover = round(runif(length(sp), 5, 90), 1),
+                                decade = decs[di])
+    }
+    for (i in 1:50) {
+      pid <- pid + 1L
+      sp <- sample(a, sample(3:6, 1))
+      rows[[pid]] <- data.frame(plot = paste0("p", pid), species = sp,
+                                cover = round(runif(length(sp), 5, 90), 1),
+                                decade = decs[di])
+    }
+  }
+  do.call(rbind, rows)
+}
+
+x <- specvec(sim_time(), "plot", "species", abundance = "cover", time = "decade")
+x
+```
+
+The `focal` species starts among the `a` pool and is pulled toward the `b` pool
+as the decades pass. The `a`-only backbone plots keep the `a` species anchored,
+so they make a sensible frame.
+
+## A single window
+
+A frame is itself just a species embedding. To see what one window looks like in
+isolation, fit an embedding on a slice of the data with the `time` argument.
+A numeric vector selects a closed interval, so `time = c(1990, 2000)` trains on
+every plot whose decade falls between 1990 and 2000.
+
+```{r window}
+emb_early <- species_embedding(x, time = c(1990, 2000), dim = 6, min_occurrence = 2)
+emb_early
+```
+
+This is a valid embedding of the early decades. The trouble is the second one.
+
+```{r window2}
+emb_late <- species_embedding(x, time = c(2010, 2020), dim = 6, min_occurrence = 2)
+emb_late
+```
+
+`emb_early` and `emb_late` are two independent fits. Each has its own sign-fixed
+axes, but those axes were chosen against different co-occurrence operators, so the
+6 dimensions of one do not correspond to the 6 dimensions of the other. Comparing
+`emb_early$V` to `emb_late$V` entry by entry measures the difference between two
+coordinate systems as much as any difference between two decades. This is the
+alignment problem in miniature, and it is the reason `species_trajectory()`
+exists: it fits the frame once and reuses it for every window, so the comparison
+is clean by construction.
+
+## Species trajectories
+
+`species_trajectory()` traces one or more focal species through the fixed frame.
+The frame defaults to every species except the focal ones, so the focal species
+move through a background they do not help define. Each window places the focal
+species at the cover-weighted centroid of the frame species it co-occurs with in
+that window, and a focal species never contributes to its own position.
+
+```{r traj}
+tr <- species_trajectory(x, species = "focal", by = NULL, dim = 6,
+                         min_occurrence = 2)
+tr
+```
+
+The print shows the frame (here the 16 non-focal species, embedded once), the
+four windows, and the per-cell support range. With `by = NULL`, one window is cut
+per distinct decade. The tidy form spreads the array into one row per
+focal-species-by-window cell, carrying the window center, the support, and the
+`dim` coordinate columns `d1` through `d6`.
+
+```{r traj-df}
+d <- as.data.frame(tr)
+d
+```
+
+The `support` column is the number of window plots that actually contain the
+focal species, and `center` is the numeric window center used for ordering and
+plotting. The `windows` table records the same window metadata directly, with the
+plot count per window.
+
+```{r traj-windows}
+tr$windows
+```
+
+A cell is `NA` in the coordinate columns when the focal species co-occurs with no
+frame species in that window, so its centroid is undefined. That happens in
+sparse windows, and `as.data.frame(tr, na.rm = TRUE)` drops those rows. Here the
+focal species occurs in roughly 100 plots per decade, so every cell is backed by
+ample co-occurrence and none are `NA`.
+
+The displacement of the focal species between consecutive windows is the
+Euclidean distance between successive rows of the coordinate matrix. The frame is
+fixed, so this distance is a real measure of how far the species' associates
+moved, not an artifact of refitting.
+
+```{r traj-plot}
+dcols <- grep("^d[0-9]+$", names(d))
+co <- as.matrix(d[order(d$center), dcols])
+step <- sqrt(rowSums((co[-1, ] - co[-nrow(co), , drop = FALSE])^2))
+mids <- (d$center[order(d$center)][-1] + d$center[order(d$center)][-nrow(co)]) / 2
+
+plot(mids, step, type = "b", pch = 19,
+     xlab = "decade midpoint", ylab = "displacement in frame",
+     main = "focal species: movement between successive decades")
+```
+
+The displacement is largest across the middle decades, where the simulated pull
+from the `a` pool to the `b` pool is steepest, and smaller at the ends. The first
+coordinate alone tells a similar story: tracking `d1` against the window center
+shows the focal species sliding along the frame's leading axis as its co-occurrents
+turn over.
+
+```{r traj-d1}
+plot(d$center, d$d1, type = "b", pch = 19,
+     xlab = "decade", ylab = "first frame coordinate (d1)",
+     main = "focal species: position on the leading frame axis")
+```
+
+Both views read the same fixed frame, so a movement on the plot is a movement in
+the data.
+
+## Choosing windows
+
+The `by` argument controls how the time axis is split. The default `by = NULL`
+makes one window per distinct time value, which suits decade-coded data where the
+decades are the natural units.
+
+```{r win-default}
+tr$windows
+```
+
+Four decades, four windows, each centered on its decade and holding 150 plots
+(100 carrying the focal species plus 50 backbone). Passing a numeric break vector
+instead bins the time axis with `cut()`, using closed lower bounds. The breaks
+`c(1985, 2005, 2025)` cut two bins, an early bin spanning 1985 to 2005 and a late
+bin spanning 2005 to 2025.
+
+```{r win-breaks}
+tr2 <- species_trajectory(x, species = "focal", by = c(1985, 2005, 2025),
+                          dim = 6, min_occurrence = 2)
+tr2$windows
+```
+
+The window centers are now the midpoints of the break intervals, 1995 and 2015,
+and each window pools two decades, so `n_plots` is 300 rather than 150. Coarser
+windows hold more plots per window, which steadies the centroid in each cell while
+lowering temporal resolution. Both readings describe the same trajectory at two
+grains, and the break vector sets the grain.
+
+## Community trajectories and novelty over time
+
+`species_trajectory()` follows individual species. `community_trajectory()`
+follows the plots themselves and asks how novel each window's communities are
+relative to a reference. The species frame is fitted once on all plots, every
+window's plots are pooled into that shared frame, and novelty is the per-plot
+mean distance to the `k` nearest reference communities.
+
+```{r comm}
+ct <- community_trajectory(x, dim = 6, min_occurrence = 2, k = 5)
+ct
+```
+
+The print lists the reference window (the first, 1990, by default) and the
+mean novelty per window. The `novelty` table holds the full summary: window
+label, center, plot count, and the mean and median per-plot novelty against the
+reference.
+
+```{r comm-novelty}
+ct$novelty
+```
+
+Mean novelty climbs across the decades, because each later window's communities
+have drifted further from the 1990 baseline as the `focal`-carrying plots take on
+more of the `b` pool. The reference window sits at novelty zero up to the nearest-
+neighbour averaging, since it is being compared to itself.
+
+```{r comm-plot}
+nv <- ct$novelty
+plot(nv$center, nv$mean_novelty, type = "b", pch = 19,
+     xlab = "decade", ylab = "mean novelty vs reference",
+     main = "community novelty relative to the 1990 baseline")
+```
+
+The reference is a choice, not a fixed point. Passing `reference =` a later window
+label or index re-bases the novelty against that window instead of the first.
+Setting the reference to the final decade measures how far each window sits from
+the *end* state, which inverts the trend: early communities are now the novel
+ones.
+
+```{r comm-ref}
+ct_end <- community_trajectory(x, dim = 6, min_occurrence = 2, k = 5,
+                              reference = "2020")
+ct_end$novelty
+```
+
+The reference can also be supplied as an index (`reference = 4` picks the fourth
+window) or as an external `specvec_community` or matrix, which lets a window be
+scored against a baseline that lives outside the time series entirely, such as a
+reference community assembled from undisturbed sites.
+
+```{r comm-ref-idx}
+ct_idx <- community_trajectory(x, dim = 6, min_occurrence = 2, k = 5,
+                              reference = 4)
+identical(ct_idx$reference, "2020")
+```
+
+The `communities` field holds the per-window plot-by-dim matrices in the shared
+frame, so the embeddings are available for similarity work, clustering, or
+plotting beyond the novelty summary.
+
+## Practical guidance
+
+A few rules of thumb keep trajectories honest.
+
+**Read the support before trusting a cell.** A focal species placed from two
+co-occurring plots gives a noisier centroid than one placed from eighty. The
+`$support` matrix on a species trajectory and the `$n_plots` column on both
+`$windows` and `$novelty` report exactly how much data backs each cell. Windows
+where support drops into the low single digits deserve a skeptical eye.
+
+**Match window width to the question.** Narrow windows resolve fine temporal
+structure but spread the plots thin, raising the chance of `NA` cells and unstable
+centroids. Wide windows pool more plots per cell and steady the estimate at the
+cost of temporal resolution. The `by` break vector is the dial; widening it is the
+first move when cells go sparse.
+
+**Choose presence or cover deliberately.** With `weights = "cover"` (the default
+when cover is present) co-occurrence is weighted by the geometric mean of covers,
+matching AbundPMI, so abundant associates pull the centroid harder. With
+`weights = "presence"` every co-occurring plot counts the same. Cover is the
+sharper signal when the abundance is meaningful; presence is the safer choice when
+covers are ordinal guesses or missing.
+
+**Pick a reference window that means something.** Community novelty is always
+relative to its reference. The first window is a sensible default for "how far
+have we come", a final or undisturbed window suits "how far are we from a target",
+and an external baseline lets a whole time series be scored against ground that
+sits outside it.
+
+**Reuse the frame across analyses.** Both verbs accept `frame_embedding =` a
+pre-fitted `specvec_embedding`. Fitting one frame and passing it to both
+`species_trajectory()` and `community_trajectory()` puts the species tracks and
+the community novelty in the same coordinate system, so the two readings line up
+exactly.
+
+Trajectories stop being reliable when windows go sparse: a focal species with no
+co-occurrence in a window yields an `NA` cell, and a window with only a handful of
+plots gives a centroid that swings on individual records.
+
+`integration_trajectory()` is the applied specialization of this machinery for
+alien-integration questions: it places a neophyte with `species_trajectory()`,
+places the native community per window in the same frame, and reads the distance
+between them over time. The mechanics here are general; the alien case is worked
+end to end, with ReSurvey anchoring and an EVA example, in
+`vignette("specvec-integration")`.

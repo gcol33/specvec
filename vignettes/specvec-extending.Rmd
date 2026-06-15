@@ -1,0 +1,384 @@
+---
+title: "Extending specvec: weightings, factorizations, methods"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Extending specvec: weightings, factorizations, methods}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r setup}
+library(specvec)
+```
+
+The methods that ship with SpecVec are points on a grid, and the grid is open.
+A new weighting, a new factorization, or a new ordinal cover scale enters by
+registration, and from that moment it behaves like a built-in. This vignette
+adds three things that run: a van der Maarel cover scale, a Jaccard association
+weighting with its method, and a deliberate capability mismatch that the engine
+rejects. The companion `vignette("specvec-methods")` covers the built-in
+operators those examples build on.
+
+## The registry model
+
+A method in SpecVec is a registered name that points at a
+`(weighting, factorization)` pair together with a capability descriptor:
+its input shape, its native output, whether it reads cover, and a default
+dimension. `register_method()` writes that record; nothing is copied. Adding the
+hundredth method costs the same as adding the second, because dispatch reads the
+record rather than branching on a method name. The five shipped methods are
+exactly five such records. `pmi` and `abund_pmi` reuse the `eigen` factorization
+with different weightings, `ca` and `glove` pair their own operands with `svd`
+and the GloVe objective, and a sixth method that reused an existing weighting
+would be one more `register_method()` line rather than one more code path.
+
+```{r methods}
+specvec_methods()
+```
+
+Three registries sit behind those names. `register_weighting()` records the
+function that turns a `specvec_data` object into the operator a factorization
+consumes. `register_factorization()` records the function that turns that
+operator into a species by dimension matrix. `register_method()` records the
+pairing plus its capability flags. A weighting takes `(data, ks, n_plots,
+min_cooccurrence)`, where `data$P` is the sparse plot by species presence
+matrix, `data$COV` is cover or `NULL`, `data$species` holds the character ids,
+and `ks` indexes the species columns that survived the rare-species filter. It
+returns a list with a `kind` field.
+
+That `kind` field is the contract between the two halves. A weighting declares
+one of three kinds, and that declaration alone decides which factorizations can
+consume it. `"sym"` is a symmetric species by species matrix `$M`, the form an
+eigendecomposition wants. `"counts"` is a species by species co-occurrence
+matrix `$M`, the raw operand the GloVe objective brings its own loss to.
+`"implicit"` carries matrix-vector closures rather than a stored matrix, so a
+large contingency table is never densified, which is how correspondence analysis
+runs. Alongside `$M` (or the closures), a weighting also returns `species`, the
+character ids of the kept species in the row and column order of the operator, so
+the factorization can attach names to the rows of the matrix it produces. A
+factorization declares, through its `accepts` field, exactly one kind it will
+consume: `eigen` accepts `"sym"`, `svd` accepts `"implicit"`, `glove` accepts
+`"counts"`. Pairing a weighting with a factorization that accepts a different
+kind is the one error the fitter raises before doing any numerical work, and the
+worked mismatch later in this vignette shows the message it produces.
+
+The capability descriptor on a method carries a few more flags. `input` is
+`"species_species"` when the operand is a square species matrix and
+`"plot_species"` when it is the plot by species contingency that correspondence
+analysis factorizes implicitly. `native_output` is `"species"` for a method that
+produces species vectors directly, or `"species_and_community"` for one that
+yields plot vectors in the same pass. `supports_abundance` records whether the
+method reads cover, which lets a caller know an embedding will respond to the
+`COV` matrix rather than only presence. `default_dim` is the dimension used when
+none is given. These flags are descriptive: they let the print methods report what
+a method does without running it, and they are how a method declares its shape
+rather than discovering it mid-fit.
+
+The dataset for the rest of the vignette is a small latent-niche simulation. Each
+of 60 plots draws a niche center on the unit interval; a species enters a plot
+with probability falling off as the squared distance from its own niche optimum,
+and cover is a random percent. Species with similar optima end up co-occurring,
+which is the structure an embedding should recover. The rare-species filter stays
+low (`min_occurrence` of 2) because the simulation is small. Twelve species and
+sixty plots keep every operator small enough to print a corner of, and the
+embedding dimension stays at six or fewer, which is more than the latent structure
+needs and small enough to fit instantly. `set.seed(1)` fixes the simulation so the
+numbers below reproduce.
+
+```{r data}
+set.seed(1)
+n_plots <- 60L; n_sp <- 12L
+niche <- runif(n_sp)
+rows <- lapply(seq_len(n_plots), function(p) {
+  prob    <- exp(-((niche - runif(1))^2) / 0.02)
+  present <- which(runif(n_sp) < prob)
+  if (length(present) < 2L) present <- order(prob, decreasing = TRUE)[1:2]
+  data.frame(plot = sprintf("p%02d", p),
+             species = sprintf("sp%02d", present),
+             cover = round(runif(length(present), 1, 100)))
+})
+df <- do.call(rbind, rows)
+x  <- specvec(df, plot = "plot", species = "species", abundance = "cover")
+x
+```
+
+## Inspecting operators with cooc_matrix()
+
+Before writing a weighting it helps to see what one produces. `cooc_matrix()`
+runs a built-in weighting and hands back the operator, so the species by species
+form is visible without fitting anything. The counts operator is the plain
+co-occurrence matrix: entry `[a, b]` is the number of plots holding both species,
+and the diagonal is each species' occurrence count.
+
+```{r cooc-counts}
+Cc <- cooc_matrix(x, "counts", min_occurrence = 2)
+class(Cc)
+dim(Cc)
+```
+
+The result is a `dgCMatrix`, sparse and square over the kept species. Most
+species pairs never share a plot in 60 records, so most entries are structural
+zeros that the sparse format never stores. The PPMI operator runs the same
+co-occurrence count through a positive pointwise mutual information transform:
+the count is compared against the product of the two marginals, the logarithm of
+the ratio is taken, and anything below zero is clipped to zero.
+
+```{r cooc-ppmi}
+Cp <- cooc_matrix(x, "ppmi", min_occurrence = 2)
+dim(Cp)
+as.matrix(Cp)[1:5, 1:5]
+```
+
+The dense corner shows the symmetry the eigensolver relies on: `[sp01, sp02]`
+equals `[sp02, sp01]`, the diagonal is zero because a species carries no mutual
+information with itself, and a pair that never co-occurs reads as zero. That
+symmetric, non-negative, sparse matrix is precisely the `kind = "sym"` operator
+a new weighting needs to produce if it wants to feed `eigen`. The counts matrix
+above is the same idea one transform earlier, the `kind = "counts"` operand. With
+those two shapes in hand, writing a weighting becomes filling in the transform
+between them.
+
+`cooc_matrix()` is also the place to confirm that `min_occurrence` and
+`min_cooccurrence` do what an extension expects. `min_occurrence` is applied
+before the operator is built: species seen in fewer plots than the cutoff are
+dropped from `ks`, so they never reach the weighting at all, and both operators
+above are square over the same surviving species. `min_cooccurrence` is the
+weighting's own business; it arrives as the fourth argument, and a species by
+species weighting decides whether to prune pairs that share too few plots. A new
+weighting receives the same two controls every built-in does, which keeps the
+rare-species behaviour consistent across methods rather than reimplemented in
+each.
+
+## Worked example A: a new cover scale
+
+Vegetation surveys record abundance on ordinal scales, and the one a survey used
+is rarely the three SpecVec ships with. The van der Maarel 1-9 ordinal scale maps
+nine class codes to percent-cover midpoints. Registering it makes those codes
+convertible the same way Braun-Blanquet codes already are. A cover-scale function
+takes the raw column `x` and an optional `mapping`, and returns a numeric
+proportion in `[0, 1]`, with `NA` for any value it does not recognize. The `NA`
+is a signal the imputation step reads: unrecognized or missing entries are filled
+downstream with the column median.
+
+```{r vdm-register}
+register_cover_scale("vdm", function(x, mapping = NULL) {
+  m <- c(`1` = 0.1, `2` = 0.5, `3` = 1.5, `4` = 3, `5` = 8,
+         `6` = 18, `7` = 37.5, `8` = 62.5, `9` = 87.5)
+  key <- as.character(x)
+  out <- unname(m[key])
+  pmin(pmax(out, 0), 100) / 100
+})
+```
+
+The body looks up each code in the named midpoint vector `m`, where class 1 is
+0.1 percent cover and class 9 is 87.5 percent. `as.character(x)` coerces the
+column to the lookup keys, `m[key]` returns the midpoints (with `NA` for any code
+absent from `m`), `pmin(pmax(out, 0), 100)` clamps to the valid percent range,
+and dividing by 100 returns the proportion. The scale is now usable through
+`cover_from_scale()`, the front door every scale shares.
+
+```{r vdm-use}
+cover_from_scale(c("1", "5", "9"), "vdm")
+```
+
+Class 1 returns 0.001, class 5 returns 0.08, class 9 returns 0.875, matching the
+midpoints divided by 100. To feed a survey recorded on this scale into `specvec()`,
+convert the column first and pass the result as proportions. The `cover_scale`
+argument of `specvec()` is restricted to the three built-in names, so a freshly
+registered scale is applied at the `cover_from_scale()` step rather than passed by
+name into `specvec()`.
+
+```{r vdm-pipeline}
+veg <- data.frame(plot = df$plot, species = df$species,
+                  vdm = sample(as.character(1:9), nrow(df), replace = TRUE))
+veg$cover_prop <- cover_from_scale(veg$vdm, "vdm")
+xv <- specvec(veg, plot = "plot", species = "species",
+              abundance = "cover_prop", cover_scale = "proportion")
+xv$meta$has_abundance
+```
+
+The converted column carries proportions in `[0, 1]`, so `cover_scale =
+"proportion"` is the right reader for it, and the resulting object holds cover the
+same as any other. A custom scale registered once is then a one-line conversion
+wherever that survey's codes appear.
+
+The `mapping` argument is the reason a scale is a function rather than a fixed
+table. Braun-Blanquet conventions vary by author, and the split classes (2a, 2b,
+2m) are not universal, so the built-in scale accepts a `mapping` that overrides
+its default midpoints. The van der Maarel scale above ignores `mapping` because
+its nine classes are fixed, but a scale whose midpoints a study revises can read
+the override and fall back to a default when it is `NULL`. Returning `NA` for an
+unrecognized code keeps the conversion honest: a stray code becomes a missing
+value the imputation step handles, so a typo in one record stays contained to
+that record.
+
+## Worked example B: a new weighting and method
+
+A Jaccard association is a natural weighting that SpecVec does not ship: the
+fraction of plots holding either of two species that hold both. It is symmetric
+and bounded in `[0, 1]`, which makes it a `kind = "sym"` operator that `eigen`
+can take directly. The function below builds it.
+
+```{r jaccard-weighting}
+jaccard_weighting <- function(data, ks, n_plots, min_cooccurrence) {
+  P <- data$P[, ks, drop = FALSE]
+  C <- Matrix::crossprod(P)                 # species x species co-occurrence counts; diag = occurrence
+  f <- Matrix::diag(C)
+  C <- methods::as(C, "TsparseMatrix")
+  i <- C@i + 1L; j <- C@j + 1L; x <- C@x
+  keep <- i != j & x > 0
+  if (min_cooccurrence > 1L) keep <- keep & x >= min_cooccurrence
+  i <- i[keep]; j <- j[keep]; x <- x[keep]
+  jac <- x / (f[i] + f[j] - x)
+  M <- Matrix::sparseMatrix(i = i, j = j, x = jac, dims = dim(C),
+                            dimnames = dimnames(C))
+  list(kind = "sym", M = M, species = data$species[ks])
+}
+```
+
+`P` is the presence matrix restricted to the kept species. `C <-
+Matrix::crossprod(P)` is the species by species co-occurrence count, where
+`C[a, b]` counts the plots holding both `a` and `b` and the diagonal `C[a, a]` is
+the occurrence count of `a`. The diagonal is pulled out as `f`, so `f[a]` is the
+number of plots holding species `a`. Coercing `C` to a `TsparseMatrix` exposes
+its stored entries as triplets: `C@i` and `C@j` are the zero-based row and column
+indices, raised to one-based with `+ 1L`, and `C@x` is the count at each. The
+`keep` mask drops the diagonal (`i != j`) and any zero count, and applies the
+`min_cooccurrence` cutoff only on the surviving off-diagonal entries. The Jaccard
+value `jac <- x / (f[i] + f[j] - x)` divides each co-occurrence count by the size
+of the union of the two species' plot sets, since `f[a] + f[b] - C[a, b]` counts
+plots holding either. Those values are reassembled into a sparse matrix with the
+same dimensions and species names as `C`, and the function returns it with
+`kind = "sym"`.
+
+Two registrations wire it in. `register_weighting()` records the function under a
+name, declaring its input shape and that it does not read cover.
+`register_method()` pairs that weighting with the `eigen` factorization under a
+friendly method name.
+
+```{r jaccard-register}
+register_weighting("jaccard", jaccard_weighting,
+                   input = "species_species", supports_abundance = FALSE)
+register_method("jaccard", weighting = "jaccard", factorization = "eigen",
+                input = "species_species", native_output = "species")
+"jaccard" %in% specvec_methods()
+```
+
+The method now lists alongside the built-ins and fits through the ordinary front
+door. `species_embedding()` reads the method record, runs `jaccard_weighting` to
+build the symmetric operator, checks that `eigen` accepts the `"sym"` kind it
+produced, and takes the top eigenpairs.
+
+```{r jaccard-fit}
+emb <- species_embedding(x, method = "jaccard", dim = 6, min_occurrence = 2)
+dim(emb$V)
+nearest_species(emb, rownames(emb$V)[1], n = 3)
+```
+
+The embedding `$V` is a 12 by 6 matrix, one row per kept species, six dimensions
+as requested. `eigen` accepts this operator because its `accepts` field is
+`"sym"` and the weighting declared `kind = "sym"`: a symmetric matrix has a real
+eigendecomposition, and the embedding is its leading eigenvectors scaled by the
+square roots of the positive eigenvalues. `nearest_species()` reads the same
+matrix and returns the species whose vectors point most nearly the same way,
+which for this simulation are the species sharing a niche optimum.
+
+The fitted object carries more than the matrix. `emb$method` records `"jaccard"`,
+`emb$weighting` and `emb$factorization` record the pair that produced it, and
+`emb$preprocessing` records the rare-species cutoffs and the species counts, so a
+Jaccard embedding is self-describing in the same way an `abund_pmi` one is. The
+new method gained every downstream consumer at once: anything that takes a
+`specvec_embedding` (nearest neighbours, similarities, community pooling) works on
+the Jaccard vectors without a line written for the new operand, because those
+functions read the matrix and its metadata rather than the method that built it.
+
+## The capability check
+
+The kind contract is enforced at fit time. Pairing the Jaccard weighting,
+which produces `"sym"`, with the `svd` factorization, which accepts `"implicit"`,
+is a combination the engine refuses. Calling `species_embedding()` with
+`method = NULL` and an explicit `weighting`/`factorization` pair forces exactly
+that mismatch.
+
+```{r capability-mismatch, error = TRUE}
+species_embedding(x, weighting = "jaccard", factorization = "svd",
+                  method = NULL, dim = 6, min_occurrence = 2)
+```
+
+The fitter runs the weighting, reads the `kind` of the operator it returned,
+compares it against the factorization's `accepts`, and stops before any
+decomposition when they differ. The message names both sides: `svd` consumes
+`"implicit"`, but `jaccard` produced `"sym"`. The check is cheap and total. A
+stored symmetric matrix has no matrix-vector closures for `svd` to call, and an
+implicit operator has no `$M` for `eigen` to decompose, so a silent type error
+later is converted into a clear refusal up front. The same gate is why every
+built-in method pairs a weighting with a factorization that names the matching
+kind.
+
+Forcing the pair through the `weighting` and `factorization` arguments is the
+explicit route a method record normally takes implicitly. When `method` is
+supplied, the record names a weighting and a factorization that already agree on
+kind, so the check passes by construction. Setting `method = NULL` and naming the
+two halves directly is how an extension author tries a combination the registry
+does not bless, and the check is what tells them, immediately, whether the
+operand a weighting produces is the operand a factorization reads. A new
+factorization that consumes `"sym"` would compose with `jaccard`, `pmi`, and
+`abund_pmi` the moment it registered, with no change to any of them, because the
+kind is the only thing the pairing depends on.
+
+## Practical guidance
+
+A few rules keep an extension clean. Add a weighting when the operand is new: a
+different way to turn plots into a species by species (or plot by species) matrix,
+as Jaccard turns co-occurrence into an overlap fraction. Add a factorization when
+the operand is the same but the decomposition differs: a different way to read
+vectors out of a matrix the existing weightings already produce. Most ecological
+extensions are weightings, because the modelling choice usually lives in how
+association is measured.
+
+Match the kind to the factorization. A `"sym"` operator needs a symmetric matrix
+and pairs with `eigen`; an asymmetric matrix breaks the real eigendecomposition
+`eigen` assumes, so symmetrize it inside the weighting before returning. A
+`"counts"` operator is the raw co-occurrence matrix that an objective
+factorization such as `glove` consumes with its own loss. An `"implicit"`
+operator carries matrix-vector closures for a factorization that never
+densifies a large operand, the route correspondence analysis takes. Declaring a
+kind the paired factorization does not accept fails at the capability check, by
+design.
+
+Keep the result deterministic. The `eigen` and `svd` factorizations return
+vectors that are unique only up to sign, and the engine fixes each column's sign
+so its largest-magnitude entry is positive. A weighting that returns a stable
+operator therefore yields a stable embedding: two fits of the same data return
+identical matrices. Randomness inside a weighting, an unordered set used as a key,
+or a tie broken by floating-point noise would leak into the vectors and break that
+guarantee, so a weighting that needs a random component should seed it. The sign
+fix is applied after factorization, so an extension does not handle it; returning
+a deterministic operator is enough.
+
+Registrations belong in the `.onLoad` of an extending package, where they run
+once when the package loads, or in a script sourced before fitting; the registry
+is shared package state, not per-call configuration. Registering inside the
+function that fits would re-register on every call, and a name registered twice
+silently replaces the earlier entry, so a typo that shadows a built-in is easy to
+make and quiet to miss. Keeping registrations in one place, run once, keeps the
+set of available methods inspectable through `specvec_methods()` at any point.
+
+Do not register a new method for what an argument on an existing weighting already
+covers. A weighting that differs from a built-in only by a threshold or a switch
+belongs as a parameter to that weighting. Two near-identical weightings split the
+maintenance and tempt a caller to compare results that differ by one line of
+hidden code; one weighting with an argument keeps the choice visible at the call.
+The Jaccard weighting earned its own registration because the overlap fraction is
+a genuinely different operand from PPMI, with its own bounded definition.
+
+The built-in operators and the reasoning behind each are described in
+`vignette("specvec-methods")`, which walks through the cover-weighted PMI default,
+the compositional `clr` route, correspondence analysis, and the GloVe objective.
+Reading what those operands measure is the fastest way to decide whether a new
+modelling idea is a fresh weighting, an argument on an existing one, or a new
+factorization over an operand SpecVec already builds.

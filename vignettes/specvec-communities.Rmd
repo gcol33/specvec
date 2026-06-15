@@ -1,0 +1,433 @@
+---
+title: "Community embeddings and novelty"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Community embeddings and novelty}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4)
+```
+
+```{r setup}
+library(specvec)
+```
+
+A species embedding gives every species a vector. This vignette moves up one
+level: it places each plot in that same space, compares plots to each other and
+to a reference set, and scores how far a plot sits from familiar ground. The
+worked examples run on a small simulated dataset where plots draw their species
+from latent niches, so a plot's position in the embedding has a meaning we can
+check against the way it was generated.
+
+Three functions carry the work. `community_embedding()` pools species vectors
+into one vector per plot. `community_similarity()` compares those plot vectors,
+pairwise within one set or across two sets. `community_novelty()` scores each
+plot by its distance to a reference body of communities. All three operate on the
+same plot-by-dim matrix, so the path runs once from species vectors to plot
+vectors and then branches into comparison and novelty without refitting.
+
+The simulation builds `M` plots over a two-dimensional environment. Each species
+has a niche centre, and a plot holds a species with probability that falls off
+with the squared distance between the plot's environment and the species centre.
+Cover is the relative niche match, scaled so the best-matched species in a plot
+reads 100.
+
+```{r sim}
+sim_plots <- function(M = 300, S = 40, seed = 1) {
+  set.seed(seed)
+  mu <- matrix(rnorm(S * 2), S, 2)
+  env <- matrix(rnorm(M * 2), M, 2)
+  rows <- lapply(seq_len(M), function(p) {
+    d2 <- rowSums((mu - matrix(env[p, ], S, 2, byrow = TRUE))^2)
+    prob <- exp(-d2 / 2)
+    present <- which(runif(S) < prob)
+    if (length(present) < 2) present <- order(prob, decreasing = TRUE)[1:2]
+    data.frame(plot = paste0("p", p),
+               species = paste0("sp", present),
+               cover = round(100 * prob[present] / max(prob[present]), 1))
+  })
+  do.call(rbind, rows)
+}
+```
+
+## From species vectors to plot vectors
+
+A species embedding `V` is a species-by-dim matrix: row `s` is the vector for
+species `s`. A plot is a set of species, sometimes with cover. The community
+embedding turns that set into a single point by pooling the vectors of the
+species the plot contains, weighted by how much of each species is there:
+
+```
+U[p, ] = sum_s w[p, s] * V[s, ] / sum_s w[p, s]
+```
+
+The numerator adds up the species vectors, each scaled by its weight in the
+plot; the denominator divides by the total weight, so `U[p, ]` is a weighted
+average that lands inside the cloud of the plot's species. Two plots that share
+most of their species, and weight them similarly, land near each other. A plot
+made of niche specialists from one corner of the environment lands in that
+corner of the embedding. The readout is the same regardless of which method
+produced `V`, so plot vectors from different fits stay comparable as long as the
+underlying species vectors agree.
+
+The weighted average has a useful consequence. A plot vector is never an
+arbitrary point; it is a convex combination of its species' vectors, so it sits
+in the hull of the species it contains. A plot with one species sits exactly on
+that species' vector. A plot with many species spread across the embedding sits
+near their weighted centroid, which tends toward the middle of the cloud. The
+geometry of the species embedding therefore propagates upward: if two species
+sit close because they co-occur, plots built from either of them sit close too.
+Species that the embedding never saw, because they fell under `min_occurrence`,
+carry no vector and drop out of the pooling, so the plot vector is built from the
+species that survived the rare-species filter.
+
+The build starts with `specvec()`, which reads the long table into presence and
+cover matrices. A species embedding follows, and `community_embedding()` pools
+it into plot vectors.
+
+```{r build}
+df <- sim_plots(M = 300, S = 40, seed = 1)
+x <- specvec(df, "plot", "species", abundance = "cover")
+emb <- species_embedding(x, method = "abund_pmi", dim = 8, min_occurrence = 3)
+comm <- community_embedding(x, embedding = emb)
+comm
+```
+
+The print line reports the number of plots, the embedding dimension, the pooling
+rule, and the provenance of the species vectors. The plot matrix `U` carries one
+row per plot and one column per embedding dimension.
+
+```{r dims}
+dim(comm$U)
+head(rownames(comm$U), 4)
+```
+
+With 300 plots and `dim = 8`, `U` is 300 by 8. Each row is a plot's coordinates
+in the eight-dimensional species space, ready for the similarity and novelty
+tools below.
+
+## Cover vs presence pooling
+
+The weight `w[p, s]` is where cover enters. With `weights = "cover"` the weight
+is the plot's cover for species `s`, so a species covering 80 of a plot pulls the
+plot vector four times as hard as one covering 20. With `weights = "presence"`
+every present species carries weight 1, and the plot vector is the plain mean of
+the vectors of the species on the list. The two share the same species
+embedding; they differ only in how they average it. The same `emb` flows into
+both calls below, so any difference in the resulting plot positions comes from
+the weighting rule alone, which makes the comparison a clean A/B test of cover
+against presence.
+
+```{r pooling}
+comm_cov <- community_embedding(x, embedding = emb, weights = "cover")
+comm_pre <- community_embedding(x, embedding = emb, weights = "presence")
+comm_cov$pooling
+comm_pre$pooling
+```
+
+The two plot matrices are built from the same `V` and the same species lists,
+yet they place the plots differently. A quick way to see this is the per-plot
+distance between the cover vector and the presence vector: zero would mean the
+two agree, and most plots sit well above zero.
+
+```{r pooling-diff}
+delta <- sqrt(rowSums((comm_cov$U - comm_pre$U)^2))
+summary(delta)
+```
+
+The gap is largest in plots with one dominant species and several trace
+companions. Cover pooling pulls such a plot toward the dominant's vector;
+presence pooling treats the dominant and the traces alike and sits closer to the
+centroid of the whole species list. In a plot where one species covers 90 and
+two others cover 5 each, cover pooling weights the dominant eighteen times as
+heavily as either companion, so the plot vector lands almost on the dominant's
+position. Presence pooling weights all three equally and lands a third of the way
+between them. The two readings of the same plot answer different questions about
+what the plot is.
+
+The choice follows the question. Cover pooling suits abundance-driven analyses,
+where a plot carpeted by one species should read as that species' kind of place,
+and where the cover values come from a consistent scale. Presence pooling suits
+species-list work, where the data are checklists with no reliable abundance, or
+where every recorded species should count once regardless of how much of it was
+there. When the input has no cover column, `community_embedding()` falls back to
+presence pooling on its own and reports that it did so, so a presence-only
+dataset behaves sensibly without any extra argument.
+
+The scatter below shows the plots in the first two community dimensions under
+cover pooling, with four plots labelled. Position carries the latent niche: plots
+near each other share their abundant species.
+
+```{r pooling-plot, fig.width = 7, fig.height = 5}
+set.seed(2)
+lab <- sample(rownames(comm_cov$U), 4)
+plot(comm_cov$U[, 1], comm_cov$U[, 2],
+     pch = 16, col = "grey60", cex = 0.7,
+     xlab = "community dim 1", ylab = "community dim 2",
+     main = "Plots in community space (cover pooling)")
+points(comm_cov$U[lab, 1], comm_cov$U[lab, 2], pch = 16, col = "black")
+text(comm_cov$U[lab, 1], comm_cov$U[lab, 2], labels = lab, pos = 3, cex = 0.8)
+```
+
+## Fitting fresh vs reusing an embedding
+
+`community_embedding()` can fit a species embedding on the spot. Passing
+`method`, `dim`, and the rare-species filters without an `embedding` argument
+runs `species_embedding()` internally and pools the result.
+
+```{r fit-fresh}
+comm_fresh <- community_embedding(x, method = "abund_pmi", dim = 8,
+                                  min_occurrence = 3)
+comm_fresh
+```
+
+The alternative is to fit once and pass the fitted object through `embedding =`.
+When the internal fit uses the same method, dimension, and filters as a pre-fit
+embedding, the two paths produce the same species vectors and therefore the same
+plot matrix `U`.
+
+```{r fit-reuse}
+comm_reuse <- community_embedding(x, embedding = emb)
+max(abs(comm_fresh$U - comm_reuse$U))
+```
+
+The maximum element-wise difference is zero to numerical precision: the fresh fit
+and the reused embedding describe the same plots in the same coordinates. The
+equality holds because the species embedding is deterministic. SpecVec fixes the
+sign of every embedding column, so two fits of the same data with the same
+filters return byte-identical species vectors, and pooling them gives byte
+-identical plot vectors. Reusing one embedding has a practical payoff. Several
+community sets pooled from one frame share an axis system, so their plot vectors
+compare directly and the fit runs once instead of once per set. The reuse path
+also lets the species embedding come from a larger or more authoritative dataset
+than the plots being pooled, which is the usual setup when a small survey is
+placed in the coordinate system of a continental reference.
+
+`normalize = TRUE` rescales each plot vector to unit length after pooling, which
+sends every plot to the surface of a sphere and makes cosine comparisons depend
+on direction alone. Leave it off when distances between plots should reflect both
+direction and length; turn it on when only the compositional direction matters.
+
+```{r normalize}
+comm_norm <- community_embedding(x, embedding = emb, normalize = TRUE)
+comm_norm$normalized
+range(sqrt(rowSums(comm_norm$U^2)))
+```
+
+## Community similarity
+
+`community_similarity()` compares plot vectors. Called on one community object it
+returns the self-similarity matrix: every plot against every other plot. With
+`metric = "cosine"` the entries are cosine similarities in `[-1, 1]`, where 1 is
+two plots pointing the same way in species space and a value near zero is two
+plots with little in common.
+
+```{r sim-self}
+S <- community_similarity(comm_cov, metric = "cosine")
+dim(S)
+round(S[1:4, 1:4], 2)
+```
+
+The diagonal is 1, each plot is identical to itself. An off-diagonal cell close
+to 1 marks a pair of plots whose abundant species overlap and point the same
+direction; a cell near zero or below marks a pair drawing on different niches. In
+the submatrix above, the larger cells flag plot pairs that share their dominant
+species. Cosine reads composition through the embedding rather than through raw
+species overlap, so two plots can score high even with no species in common, as
+long as their species occupy nearby parts of the embedding. That is the
+difference from a Jaccard or Bray-Curtis index computed on the species lists:
+the embedding lets ecologically similar species stand in for each other, while a
+set-overlap index counts only the species that match by name.
+
+A reference set goes in through the `reference` argument. The result has one row
+per plot in `object` and one column per plot in `reference`, so it answers "how
+does each of these plots compare with each of those". Splitting the plots into
+two halves gives a worked cross-comparison.
+
+```{r sim-ref}
+plots_all <- rownames(comm_cov$U)
+half <- length(plots_all) %/% 2
+xa <- specvec(df[df$plot %in% plots_all[1:half], ], "plot", "species",
+              abundance = "cover")
+xb <- specvec(df[df$plot %in% plots_all[(half + 1):length(plots_all)], ],
+              "plot", "species", abundance = "cover")
+ca <- community_embedding(xa, embedding = emb)
+cb <- community_embedding(xb, embedding = emb)
+Scross <- community_similarity(ca, reference = cb, metric = "cosine")
+dim(Scross)
+```
+
+`metric = "euclidean"` switches the readout to straight-line distance between
+plot vectors. Distance grows as plots diverge, so it reads as a dissimilarity:
+small values are near neighbours, large values are far apart. Cosine ignores
+vector length and cares about direction; Euclidean distance feels both, and the
+two rank plot pairs differently when plots vary in how strongly their species
+load on the embedding. A species-poor plot and a species-rich plot built from
+the same niche point the same way and score high on cosine, yet sit a real
+distance apart in Euclidean terms because their vectors have different lengths.
+Pairing `metric = "euclidean"` with `normalize = TRUE` at the pooling step
+removes the length difference, so the distance then tracks direction alone and
+the two metrics agree on ordering. The Euclidean distance from
+`community_similarity()` is the same distance `community_novelty()` averages over
+its nearest neighbours, so the two functions read plots through one geometry.
+
+```{r sim-euclid}
+D <- community_similarity(comm_cov, metric = "euclidean")
+round(D[1:4, 1:4], 2)
+```
+
+An `image()` of a small cosine block shows the structure at a glance. Brighter
+cells are more similar plot pairs; the bright diagonal is each plot against
+itself.
+
+```{r sim-image, fig.width = 5.5, fig.height = 5}
+sub <- S[1:20, 1:20]
+image(seq_len(20), seq_len(20), sub,
+      col = hcl.colors(12, "YlOrRd", rev = TRUE),
+      xlab = "plot", ylab = "plot",
+      main = "Cosine similarity (first 20 plots)")
+```
+
+## Community novelty
+
+Novelty asks a different question. It measures how far a plot sits from a body of
+known communities. `community_novelty()` scores each plot in `object` by its mean
+Euclidean distance to the `k` nearest plots in `reference`.
+A plot whose `k` nearest reference neighbours are all close scores low; a plot
+that sits far from everything in the reference set scores high. The score is a
+distance, so it has no upper bound and is read relative to the spread of the
+reference.
+
+The mean-of-nearest-neighbours definition matters. A plot's novelty is the
+average distance to its `k` closest reference plots. That choice sits between two
+cruder options: distance to the single closest reference plot, which reacts to
+one chance neighbour, and distance to the reference centroid, which ignores local
+structure. Averaging over a handful of neighbours keeps the score steady against
+a lone reference plot that happens to sit nearby, so a query plot with one close
+neighbour and four distant ones still scores as novel. The score reads as
+distance to a local pocket of the reference, which is the property that lets it
+separate plots in dense regions from plots in sparse ones.
+
+The setup splits the plots into a reference set and a query set, both pooled from
+the same embedding so their coordinates align. The reference is the bulk of the
+simulated plots; the query mixes ordinary plots with a handful built to land in
+an unusual part of the species space.
+
+```{r novelty-setup}
+ref_plots <- plots_all[1:250]
+qry_plots <- plots_all[251:300]
+x_ref <- specvec(df[df$plot %in% ref_plots, ], "plot", "species",
+                 abundance = "cover")
+comm_ref <- community_embedding(x_ref, embedding = emb)
+```
+
+To force genuine novelty, build a few odd plots that pair the species sitting
+farthest apart in the embedding. Such species rarely co-occur in the reference,
+so a plot holding both pools to a point between the reference clusters, in a
+thinly populated region.
+
+```{r novelty-odd}
+dmat <- as.matrix(dist(emb$V))
+ut <- which(upper.tri(dmat), arr.ind = TRUE)
+ord <- order(dmat[ut], decreasing = TRUE)
+set.seed(7)
+odd <- do.call(rbind, lapply(1:6, function(i) {
+  pr <- ut[ord[i], ]
+  data.frame(plot = paste0("odd", i), species = emb$species[pr],
+             cover = round(runif(2, 40, 100), 1))
+}))
+qry_df <- rbind(df[df$plot %in% qry_plots, ], odd)
+x_qry <- specvec(qry_df, "plot", "species", abundance = "cover")
+comm_qry <- community_embedding(x_qry, embedding = emb)
+```
+
+With reference and query in hand, `community_novelty()` returns one score per
+query plot. `k = 5` averages over the five nearest reference communities, which
+smooths over a single unusually close or far neighbour while still tracking the
+local density of the reference.
+
+```{r novelty-run}
+nov <- community_novelty(comm_qry, comm_ref, k = 5)
+round(sort(nov, decreasing = TRUE)[1:8], 3)
+```
+
+The six odd plots take the top six places. They pair species the reference rarely
+holds together, so their plot vectors land in a thinly populated region and their
+nearest five reference neighbours sit far away, around 0.5 to 0.7 in embedding
+distance. Ordinary query plots, built the same way as the reference, score below
+0.3 because they fall inside the reference cloud where neighbours are close.
+
+```{r novelty-check}
+is_odd <- grepl("^odd", names(nov))
+c(odd = mean(nov[is_odd]), ordinary = mean(nov[!is_odd]))
+```
+
+The mean novelty of the deliberately odd plots runs about four to five times the
+ordinary query plots, which is the behaviour the score is built to give. A
+histogram shows the bulk of plots at low novelty with a tail of outliers; the odd
+plots sit in that tail, marked by the red rug.
+
+```{r novelty-hist, fig.width = 7, fig.height = 4}
+hist(nov, breaks = 12, col = "grey80", border = "white",
+     xlab = "novelty (mean distance to 5 nearest reference plots)",
+     main = "Distribution of community novelty")
+rug(nov[is_odd], col = "red", lwd = 2)
+```
+
+The choice of `k` trades sensitivity against stability. Small `k` (1 or 2) reacts
+to the single closest reference plot and flags anything off the beaten track, at
+the cost of noise. Larger `k` averages over a neighbourhood and reports distance
+to a region rather than a point, which is steadier when the reference is dense.
+The function caps `k` at the number of reference communities, so passing a `k`
+larger than the reference simply uses every reference plot. The reference may be
+a `specvec_community` or a plain numeric matrix of community vectors, so a fixed
+set of reference coordinates, saved once, can be reused across many query
+batches without rebuilding a community object each time.
+
+One detail keeps the comparison honest: the query and the reference must live in
+the same coordinate system. Pooling both through the same species embedding `emb`
+guarantees that. A novelty score computed against a reference pooled from a
+different fit would mix two axis systems and report distances that mean nothing,
+which is the same reason the similarity examples above pooled their two halves
+from one shared `emb`.
+
+## Practical guidance
+
+A few rules of thumb cover most uses.
+
+Choose pooling by what the data mean. Use `weights = "cover"` when abundance is
+reliable and a dominant species should dominate the plot vector, so a stand
+carpeted by one species reads as that species' kind of place. Use
+`weights = "presence"` for checklists, for occurrence-only surveys, and whenever
+every recorded species should count once. The default falls back to presence on
+its own when the data carry no cover column.
+
+Normalize when only direction matters. Leaving `normalize = FALSE` keeps both the
+direction and the length of each plot vector, so a strongly loaded plot reads as
+more extreme than a faint one. Set `normalize = TRUE` when plots should be
+compared on composition alone, which is the common choice ahead of cosine
+clustering, since every plot then sits on the unit sphere and length drops out.
+
+Pool several community sets from one shared embedding. Fitting the species
+embedding once and passing it through `embedding =` to each
+`community_embedding()` call guarantees the sets share an axis system. Plot
+vectors from different sets then compare directly, and the fit cost is paid once.
+Refitting per set risks sign or scaling drift that breaks cross-set comparison.
+
+Scale `k` to the reference. With a small reference set a large `k` averages over a
+big fraction of all reference plots and washes out the local structure novelty is
+meant to read; `community_novelty()` already caps `k` at the number of reference
+communities. With a few hundred reference plots, `k` of 5 to 10 balances
+sensitivity against noise. Keep `k` well below the reference size so the score
+still reflects a local neighbourhood.
+
+Give novelty a meaningful reference. The score is a distance to whatever
+reference you pass, so a reference that is itself narrow makes ordinary plots look
+novel, and a reference that already contains the odd communities makes them look
+ordinary. A reference assembled to represent "what is known" gives a score that
+reads as "how far from the known". This is also the limit to keep in mind:
+novelty is relative to the reference, not an absolute outlier score, so a plot
+flagged as novel against one reference can be unremarkable against another.

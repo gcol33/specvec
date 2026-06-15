@@ -1,0 +1,405 @@
+---
+title: "Getting started with specvec"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with specvec}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4)
+```
+
+```{r setup}
+library(specvec)
+```
+
+## Introduction
+
+specvec learns abundance-aware vectors for species and for whole communities from
+ecological plot data. The input is the long table that nearly every vegetation
+survey already produces: one row per plot-species record, optionally carrying a
+cover value. From that table specvec places every species at a point in a shared
+coordinate space, where species that keep the same company across plots land near
+each other. Two species that repeatedly share habitat end up with similar vectors;
+two species that never co-occur sit far apart.
+
+Cover enters the geometry through the weighting, not as an afterthought. In the
+default method, a co-occurring plot contributes the geometric mean of the two
+species' covers, so a plot where both species dominate counts for more than a plot
+where one is a trace. A species that is consistently abundant in the company it
+keeps gets pulled harder toward that company than a species that merely brushes
+past it. This is what "abundance-aware" means here: the same word ("co-occurrence")
+gets a quantitative weight instead of a yes/no.
+
+The second idea is that communities are first-class citizens of the same space.
+Once species have vectors, a plot becomes the cover-weighted average of the
+vectors of the species it holds. Plots therefore live in the same coordinate
+system as species, and the distance between two plots reflects how similar their
+weighted species composition is in embedding terms. That single readout supports
+similarity matrices between plots, novelty scores for a plot against a reference
+set, and trajectories over time. A plot vector and a species vector can sit side by
+side and be compared with the same cosine, because they were built from the same
+coordinates.
+
+It helps to contrast this with the table that usually starts a vegetation
+analysis. A plot-by-species matrix records who is present and how much, but it says
+nothing directly about which species behave alike: that has to be inferred through
+an ordination or a distance measure layered on top. An embedding bakes the
+similarity into the coordinates themselves. Two species sit close exactly when
+their cover-weighted co-occurrence is higher than chance would predict, so reading
+off neighbours, clustering, and projecting all reduce to ordinary geometry in a
+modest number of dimensions, typically a few dozen rather than the thousands of
+raw species columns.
+
+This vignette walks the full path on small simulated data: build a `specvec_data`
+object, fit a species embedding, read off neighbours and pairwise similarities,
+pool plots into community vectors, compare cover-weighted against presence-weighted
+pooling, score novelty against a reference block, and run the shipped method
+bake-off. Every step uses base R graphics so the example knits anywhere, and the
+data are small enough (a few hundred plots) that each fit returns in a moment. The
+closing section is a set of short, runnable pointers into the deeper vignettes.
+
+## A worked dataset
+
+A clean way to see the geometry work is to simulate it from a known cause. Give
+each of `S` species a latent niche, a point `mu` in a two-dimensional environment.
+Give each of `M` plots an environmental position `env`. A species occurs in a plot
+with probability that falls off with the squared distance between the species'
+niche and the plot's environment, and where it does occur its cover scales with
+that same probability. Species with nearby niches will tend to show up together in
+plots whose environment sits between them, which is the co-occurrence structure
+specvec is built to recover.
+
+The simulation is deliberately transparent so the embedding has a known answer to
+match. Two species whose niches `mu` are close share many of the same plots and
+both reach high cover there, which is exactly the cover-weighted co-occurrence the
+default operator rewards; two species whose niches sit far apart rarely meet. If
+the method works, the species map it produces should mirror the latent niche map
+that generated the data, up to rotation and scale.
+
+```{r sim}
+sim_plots <- function(M = 300, S = 40, seed = 1) {
+  set.seed(seed)
+  mu  <- matrix(rnorm(S * 2), S, 2)
+  env <- matrix(rnorm(M * 2), M, 2)
+  rows <- lapply(seq_len(M), function(p) {
+    d2 <- rowSums((mu - matrix(env[p, ], S, 2, byrow = TRUE))^2)
+    prob <- exp(-d2 / 2)
+    present <- which(runif(S) < prob)
+    if (length(present) < 2) present <- order(prob, decreasing = TRUE)[1:2]
+    data.frame(plot = paste0("p", p), species = paste0("sp", present),
+               cover = round(100 * prob[present] / max(prob[present]), 1))
+  })
+  df <- do.call(rbind, rows)
+  attr(df, "mu") <- mu
+  df
+}
+df <- sim_plots()
+head(df, 4)
+```
+
+The result is a long `plot, species, cover` table, exactly the shape `specvec()`
+expects. The default run draws 300 plots over 40 species, and the falloff term
+`exp(-d2 / 2)` keeps each plot to the handful of species whose niches lie near its
+environment. A short guard promotes the two highest-probability species into any
+plot that would otherwise hold fewer than two, so no plot is empty.
+
+We pass the column roles by name and read cover on the percent scale (values run
+from near 0 up to 100). Internally `specvec()` builds two sparse matrices over a
+sorted species index: a presence matrix `P` of zeros and ones, and a cover matrix
+`COV` rescaled into `[0, 1]`. The print method reports how many plots and species
+survived, whether cover is present, and how duplicate plot-species rows were
+aggregated; the `duplicates = "max"` default keeps the largest cover when a species
+appears twice in one plot.
+
+```{r build}
+x <- specvec(df, plot = "plot", species = "species", abundance = "cover",
+             cover_scale = "percent")
+x
+```
+
+The object exposes its pieces directly. `x$species` and `x$plots` are the sorted id
+maps, `x$P` and `x$COV` are the sparse matrices, and `x$meta` records the choices
+above. The latent niches `mu` stay attached to `df` as an attribute, so after
+fitting we can check whether species that were assigned nearby niches really did
+end up as embedding neighbours, which is the property the whole method is meant to
+recover.
+
+## Species embedding
+
+`species_embedding()` turns the data object into species vectors. The `method`
+argument is shorthand for a registered `(weighting, factorization)` pair; the
+default `"abund_pmi"` is abundance-weighted pointwise mutual information. It builds
+a cover-weighted co-occurrence operator, keeps only the positive PMI entries, and
+takes the top eigenvectors scaled by the square roots of their eigenvalues. The
+practical effect is that two species sharing a lot of cover-heavy plots get a
+large positive PMI and are pulled together, while pairs that co-occur no more than
+chance contribute nothing. When a dataset carries no cover column, `abund_pmi`
+falls back to the presence version and records that on the object.
+
+Pointwise mutual information measures how much more two species co-occur than they
+would if they were placed in plots independently. Raw counts favour common species,
+which dominate any pair they touch simply by being everywhere; PMI divides the
+observed co-occurrence by the product of the two species' marginals, so the score
+reflects association rather than abundance alone. The "abund" part replaces the
+binary presence with the square root of cover, which means a plot contributes the
+geometric mean of the two covers to the pair's score, and each species' marginal
+becomes its total cover mass instead of its plot count. Negative PMI values, the
+pairs that co-occur less than chance, are clipped to zero before the
+factorization, which keeps the operator sparse and the geometry stable.
+
+```{r fit-species}
+emb <- species_embedding(x, method = "abund_pmi", dim = 8, min_occurrence = 3)
+emb
+dim(emb$V)
+```
+
+`emb$V` is a species-by-dimension matrix with species as row names; here it is
+eight-dimensional and holds one row per species that occurred in at least three
+plots. `min_occurrence = 3` drops the rarest species before the operator is built,
+since species seen once or twice give unstable vectors, and `emb$preprocessing`
+records how many were kept against the total. The full list of fitted species is in
+`emb$species`. The fit is deterministic: eigenvectors are unique only up to sign,
+so specvec fixes each column's sign by its largest-magnitude entry, and two fits of
+the same data return identical matrices.
+
+The sticky readout is "which species sit next to this one". `nearest_species()`
+ranks the closest species to a focal species by cosine similarity (the default) or
+Euclidean distance, returning a tidy data frame.
+
+```{r nearest}
+focal <- emb$species[1]
+nearest_species(emb, focal, n = 5)
+```
+
+`species_similarity()` answers the pairwise question directly. Pass two species and
+it returns one cosine in `[-1, 1]`; pass one species and it returns the full named
+vector of similarities to every species, handy for sorting or thresholding.
+
+```{r similarity}
+others <- emb$species[2:3]
+species_similarity(emb, focal, others[1])
+sim_all <- species_similarity(emb, focal)
+round(sort(sim_all, decreasing = TRUE)[1:4], 3)
+```
+
+The cosine ranges over `[-1, 1]`: values near 1 mark species the embedding treats
+as habitat partners, values near 0 mark species with no shared signal, and negative
+values mark species that avoid each other. The named-vector form is the basis for
+any downstream sort or threshold, for instance pulling every species within a
+chosen similarity of a focal taxon.
+
+The first two embedding columns carry the leading eigenvalues, so a scatter of
+column 1 against column 2 gives a readable map of the dominant gradient. The full
+geometry lives in all eight dimensions, and this projection flattens the rest, but
+it is enough to see clusters form. We label a handful of species so the picture
+stays uncluttered.
+
+```{r plot-species, fig.alt = "Two-dimensional scatter of the first two species-embedding columns for a handful of species, each point labelled with its species id."}
+V <- emb$V
+show <- emb$species[1:12]
+plot(V[show, 1], V[show, 2], pch = 19, col = "#3366aa",
+     xlab = "embedding dim 1", ylab = "embedding dim 2",
+     main = "Species in the first two embedding dimensions")
+text(V[show, 1], V[show, 2], labels = show, pos = 3, cex = 0.7)
+```
+
+Points that cluster on this map are species the embedding judges to share habitat,
+which traces back to the latent niches that generated the data.
+
+## Community embeddings
+
+Species vectors are the building block; community vectors are the payoff.
+`community_embedding()` places each plot in the same space by pooling the vectors
+of the species the plot contains. Passing the already-fitted embedding through
+`embedding =` reuses those exact vectors instead of refitting, which keeps the
+species and community spaces aligned and saves the fit. With `weights = "cover"`
+(the default when cover is present) the pooling is a cover-weighted average, so a
+dominant species steers the plot vector more than a trace; with
+`weights = "presence"` it is the plain mean of the present species' vectors.
+
+```{r fit-community}
+comm <- community_embedding(x, embedding = emb, weights = "cover")
+comm
+dim(comm$U)
+```
+
+`comm$U` is a plot-by-dimension matrix with plots as row names, one row per plot
+that contributed species in the fitted set. The pooled-vector readout is uniform
+across embedding methods, so plot vectors stay comparable no matter which method
+produced the species vectors underneath; the species space can change recipe while
+the community readout stays a weighted average over it. A plot lands at the
+weighted centre of its species, so a plot dominated by one cover-heavy species sits
+close to that species' vector, and a plot spread evenly across several sits near
+their average.
+
+The presence-weighted version answers a slightly different question. It asks which
+species are there at all rather than how much of each there is, and the two can
+disagree for plots dominated by one species. Cover pooling lets a single abundant
+species pull the plot toward its own corner of the space; presence pooling gives
+every present species an equal vote regardless of how much ground it covers.
+Comparing the two placements is a quick way to see how much abundance, rather than
+mere species list, is shaping a given plot's position.
+
+```{r presence-community}
+comm_pres <- community_embedding(x, embedding = emb, weights = "presence")
+comm_pres$pooling
+```
+
+`community_similarity()` returns a plot-by-plot matrix of cosines. Restricting it
+to a few plots makes the structure easy to read: values near 1 mark plots with
+near-identical weighted composition, values near 0 mark plots with little shared
+signal.
+
+```{r community-sim}
+plots5 <- comm$plots[1:5]
+sub <- structure(list(U = comm$U[plots5, , drop = FALSE], pooling = comm$pooling,
+                      normalized = comm$normalized, from = comm$from, plots = plots5),
+                 class = "specvec_community")
+round(community_similarity(sub, metric = "cosine"), 2)
+```
+
+`community_novelty()` scores how unusual a plot is against a reference set: for
+each scored plot it averages the distance to its `k` nearest reference
+communities, so a plot that sits far from everything in the reference scores high.
+We split the plots into a reference block and a query block and score the queries
+against the reference.
+
+```{r novelty}
+ref_plots <- comm$plots[1:250]
+qry_plots <- comm$plots[251:length(comm$plots)]
+ref <- structure(list(U = comm$U[ref_plots, , drop = FALSE], pooling = comm$pooling,
+                      normalized = comm$normalized, from = comm$from, plots = ref_plots),
+                 class = "specvec_community")
+qry <- structure(list(U = comm$U[qry_plots, , drop = FALSE], pooling = comm$pooling,
+                      normalized = comm$normalized, from = comm$from, plots = qry_plots),
+                 class = "specvec_community")
+nov <- community_novelty(qry, reference = ref, k = 5)
+round(sort(nov, decreasing = TRUE)[1:4], 3)
+```
+
+The plots at the top of that list are the ones whose weighted composition is least
+like anything in the reference block. Averaging over the `k` nearest references
+rather than the single closest one keeps the score from hinging on one quirky
+reference plot; raising `k` smooths it further and lowers the scores of plots that
+sit near a small reference cluster. On real data the reference is often a baseline
+period or a reference region, and high-novelty plots flag compositions worth a
+closer look, whether that is a community drifting away from its historical state or
+a survey reaching habitat the reference never sampled.
+
+## Comparing methods
+
+specvec registers several embedding recipes, and `compare_embeddings()` scores them
+side by side under one protocol so the choice is grounded in held-out performance
+rather than taste. It filters the species set once, splits plots into train and
+test, fits each method on the training plots through the same engine path, and
+scores the methods on neutral tasks. Here we compare correspondence analysis
+(`ca`), presence PMI (`pmi`), and the abundance-weighted default (`abund_pmi`) on
+three co-occurrence metrics across two seeds.
+
+```{r compare}
+bench <- compare_embeddings(x, methods = c("ca", "pmi", "abund_pmi"),
+                            metrics = c("cooc_ppmi", "cooc_raw", "link_auc"),
+                            dim = 8, seeds = 1:2, min_occurrence = 3)
+bench
+```
+
+The protocol matters as much as the scores. The species set is filtered once,
+globally, before any split, so every method sees the same species and the
+comparison is not confounded by one method quietly dropping rarer taxa. The plots
+are then split into train and test, each method is fit on the training plots
+through the same engine path that `species_embedding()` uses, and the held-out
+plots supply the scoring signal. Each seed is an independent split, and the table
+reports the across-seed mean and standard deviation so a method that wins by luck
+on one split is visible as a wide spread.
+
+The metrics read as follows. `cooc_raw` is the Spearman correlation between
+embedding-space similarity and held-out raw co-occurrence counts: it asks whether
+the geometry recovers how often pairs actually appear together in plots the model
+never saw. `cooc_ppmi` is the same idea scored against held-out positive PMI rather
+than raw counts, which downweights the common species that dominate raw counts.
+`link_auc` is link-prediction AUC: given pairs that do co-occur and never-seen
+negatives that do not, it measures how well embedding similarity separates them,
+with 0.5 being a coin flip and 1.0 perfect separation. The three together cover
+both the strength of association the geometry encodes and its ability to call a
+pair present or absent.
+
+The verdict line applies a rule fixed before the numbers are seen: a method beats
+the reference (`ca` by default) only if it exceeds it on both neutral metrics
+(`cooc_raw` and `link_auc`) by more than two pooled standard deviations. Fixing the
+criterion in advance keeps the comparison honest: there is no scanning for the
+metric on which a favoured method happens to look best. The same criterion is
+reported whatever the outcome, so a method that merely ties, or wins on one metric
+while tying the other, is labelled `partial` or `no advantage` rather than
+promoted. With only two seeds on a few hundred simulated plots the standard
+deviations here are wide and a clean two-sigma separation is unlikely; the verdict
+sharpens as seeds and plots grow. On continental vegetation data this protocol
+selects `abund_pmi`, and its lead over correspondence analysis widens with the
+number of plots. The companion benchmark vignette runs the full comparison,
+including the optional `glove` method, which factorizes the same co-occurrence
+operator through a weighted least-squares objective and activates when the
+`text2vec` package is installed.
+
+## Where to go next
+
+The five steps above are the whole core loop: build a data object, fit species
+vectors, pool them into community vectors, score novelty, compare methods. Each
+downstream topic has a dedicated vignette that picks up where this one stops. The
+taste tests below are runnable sketches, each a few lines plus a pointer to where
+the detail lives.
+
+**Data prep and cover scales.** `specvec()` reads percent cover by default, and
+also converts proportions and ordinal Braun-Blanquet codes, with a `duplicates`
+rule for repeated plot-species rows.
+
+```{r taste-data}
+bb <- data.frame(plot = c("a","a","b","b"), species = c("X","Y","X","Z"),
+                 bb = c("3", "+", "5", "2"))
+xb <- specvec(bb, "plot", "species", abundance = "bb",
+              cover_scale = "braun_blanquet", duplicates = "max")
+xb$meta$cover_scale
+```
+
+The cover-scale lookups, custom `cover_mapping`, and aggregation rules are covered
+in `vignette("specvec-data")`.
+
+**Community novelty in depth.** Novelty against a reference set scales to large
+reference blocks, and the interpretation shifts with the choice of reference and
+`k`.
+
+```{r taste-novelty, eval = FALSE}
+ce  <- community_embedding(x, embedding = emb)
+ref <- community_embedding(x_baseline, embedding = emb)
+nov <- community_novelty(ce, reference = ref, k = 10)
+hist(nov, main = "novelty against baseline")
+```
+
+How to choose a reference and read the novelty scores is covered in
+`vignette("specvec-communities")`.
+
+**Tracking change over time.** Store a plot-level time column on the data object and
+specvec can fit per-window embeddings placed in one shared frame, then trace how a
+species or a community moves across windows.
+
+```{r taste-time, eval = FALSE}
+xt <- specvec(df_time, "plot", "species", abundance = "cover", time = "decade")
+traj <- species_trajectory(xt, species = "sp1")
+plot(traj)
+```
+
+Windowed fits and trajectories for species and communities are in
+`vignette("specvec-temporal")`.
+
+**The maths, the bake-off, and extending it.** The operator-to-factorization
+pipeline, including the compositional `clr` route, is in
+`vignette("specvec-methods")`.
+
+```{r taste-methods}
+specvec_methods()
+```
+
+The full method comparison and the fixed verdict are in
+`vignette("specvec-benchmark")`, and adding a new weighting or factorization to the
+registry is in `vignette("specvec-extending")`.
