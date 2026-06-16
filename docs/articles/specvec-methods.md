@@ -10,18 +10,10 @@ to the quickstart, which shows the verbs in use, and to the extending
 vignette, which shows how to add a recipe of your own. Here we stay on
 the algorithm: what each operator measures, how each factorization reads
 vectors out of it, and why the two halves snap together the way they do.
-Every method follows one pipeline:
-
-    plot x species (+ cover)
-            |
-            v
-       co-occurrence operator        (counts, PMI, cover-weighted PMI, chi-square, CLR)
-            |
-            v
-       factorization                 (eigen, implicit SVD, or GloVe)
-            |
-            v
-       species vectors  ->  community vectors (pooled)
+Every method follows one pipeline: the `plot x species` table,
+optionally with cover, becomes a co-occurrence operator; a factorization
+reads species vectors out of that operator; and pooling those species
+vectors gives community vectors.
 
 A method is a registered `(weighting, factorization)` pair. `abund_pmi`,
 `pmi`, `ca`, `glove`, and `clr` are points on this grid, and
