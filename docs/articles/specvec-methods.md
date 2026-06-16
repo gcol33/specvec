@@ -38,9 +38,11 @@ output with one of three kinds, each factorization declares the one kind
 it accepts, and the engine checks the two agree before any numerical
 work begins. The three kinds and their consumers are fixed:
 
-    kind "sym"      -> symmetric species x species $M       consumed by  eigen
-    kind "counts"   -> species x species co-occurrence $M    consumed by  glove
-    kind "implicit" -> matvec closures $Af/$Atf + readout    consumed by  svd
+| `kind`       | operator                                      | consumed by |
+|--------------|-----------------------------------------------|-------------|
+| `"sym"`      | symmetric species x species matrix (`$M`)     | `eigen`     |
+| `"counts"`   | species x species co-occurrence counts (`$M`) | `glove`     |
+| `"implicit"` | matvec closures (`$Af`/`$Atf`) plus a readout | `svd`       |
 
 The five shipped methods place themselves on this grid as follows.
 `abund_pmi` and `pmi` and `clr` all build a `"sym"` operator and hand it
