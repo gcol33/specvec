@@ -2,7 +2,7 @@
 
 ## Authors
 
-- **Gilles Colling**. Author, maintainer.
+- **[Gilles Colling](https://github.com/gcol33)**. Author, maintainer.
   [](https://orcid.org/0000-0003-3070-6066)
 
 ## Citation
