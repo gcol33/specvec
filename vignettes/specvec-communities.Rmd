@@ -666,9 +666,9 @@ smoothing single-neighbour noise.
 
 ### A plain matrix as the reference
 
-The reference does not have to be a community object. `community_novelty()` reads
-either a `specvec_community` or a plain numeric matrix of community vectors, so a
-fixed reference frame can be saved once and reused across query batches.
+`community_novelty()` reads either a `specvec_community` or a plain numeric matrix
+of community vectors, so a fixed reference frame can be saved once and reused
+across query batches.
 
 ```{r novelty-matrix}
 R_mat <- comm_ref$U

@@ -795,7 +795,6 @@ smoothing single-neighbour noise.
 
 ### A plain matrix as the reference
 
-The reference does not have to be a community object.
 [`community_novelty()`](https://gcol33.github.io/specvec/reference/community_novelty.md)
 reads either a `specvec_community` or a plain numeric matrix of
 community vectors, so a fixed reference frame can be saved once and
