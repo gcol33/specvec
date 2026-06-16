@@ -83,7 +83,7 @@
 <div class="page-header"><h1 id="specvec">specvec<a class="anchor" aria-label="anchor" href="#specvec"></a>
 </h1></div>
 <p><em>species and communities as points in one space</em></p>
-<p><a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></p>
+<p><a href="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></p>
 <p><strong>Abundance-weighted PMI embeddings of species co-occurrence, with first-class community vectors and a method bake-off.</strong></p>
 <p>Feed it a long <code>plot x species (x cover)</code> table. <code>specvec</code> turns the co-occurrence into dense vectors through a sparse eigendecomposition (<code>Matrix</code> + <code>RSpectra</code>): every species becomes a point, every plot becomes a point in the same space, and species that keep the same company sit close together. Cover enters the weighting, so a dominant species counts for more than a trace occurrence. A plot-by-species table records who occurs where; <code>specvec</code> reads off which species behave alike and places communities and species in one comparable space.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
