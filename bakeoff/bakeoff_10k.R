@@ -36,7 +36,10 @@ SEEDS     <- 1:3
 TEST_FRAC <- 0.20
 GLOVE_ITER<- 20L
 TRAITS    <- c("SLA","PlantHeight","SeedMass","LDMC")
-DATA      <- "J:/Phd Local/Gilles_paper_resolve/data"
+.rd <- Sys.getenv("RESEARCH_DATA", unset = "")
+if (!nzchar(.rd)) stop("RESEARCH_DATA is not set. It must point at the research data root, ",
+                       "e.g. setx RESEARCH_DATA E:\\research", call. = FALSE)
+DATA      <- file.path(sub("/+$", "", gsub("\\\\", "/", .rd)), "outputs", "resolve-2026", "data")
 SP_FILE   <- file.path(DATA, "species_preprocessed_sample10000.csv")
 HD_FILE   <- file.path(DATA, "header_preprocessed_sample10000.csv")
 
