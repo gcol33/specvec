@@ -39,7 +39,7 @@ TRAITS    <- c("SLA","PlantHeight","SeedMass","LDMC")
 .rd <- Sys.getenv("RESEARCH_DATA", unset = "")
 if (!nzchar(.rd)) stop("RESEARCH_DATA is not set. It must point at the research data root, ",
                        "e.g. setx RESEARCH_DATA E:\\research", call. = FALSE)
-DATA      <- file.path(sub("/+$", "", gsub("\\\\", "/", .rd)), "outputs", "resolve-2026", "data")
+DATA      <- file.path(sub("/+$", "", gsub("\\\\", "/", .rd)), "projects", "resolve-2026", "data")
 SP_FILE   <- file.path(DATA, "species_preprocessed_sample10000.csv")
 HD_FILE   <- file.path(DATA, "header_preprocessed_sample10000.csv")
 

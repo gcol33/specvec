@@ -44,7 +44,7 @@ EUNIS_Q_CAP  <- 10000L     # max test plots scored for EUNIS (scaling guard)
 .rd <- Sys.getenv("RESEARCH_DATA", unset = "")
 if (!nzchar(.rd)) stop("RESEARCH_DATA is not set. It must point at the research data root, ",
                        "e.g. setx RESEARCH_DATA E:\\research", call. = FALSE)
-DATA       <- file.path(sub("/+$", "", gsub("\\\\", "/", .rd)), "outputs", "resolve-2026", "data")
+DATA       <- file.path(sub("/+$", "", gsub("\\\\", "/", .rd)), "projects", "resolve-2026", "data")
 SP_FILE    <- file.path(DATA, sprintf("species_preprocessed_sample%s.csv", SAMPLE))
 HD_FILE    <- file.path(DATA, sprintf("header_preprocessed_sample%s.csv", SAMPLE))
 OUT_CSV    <- sprintf("C:/GillesC/documents/dev/specvec/bakeoff/bakeoff_%s_mo%d_results.csv", SAMPLE, MIN_OCC)
