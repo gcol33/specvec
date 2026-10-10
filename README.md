@@ -3,6 +3,7 @@
 *species and communities as points in one space*
 
 [![R-CMD-check](https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/gcol33/specvec/graph/badge.svg)](https://app.codecov.io/gh/gcol33/specvec)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
