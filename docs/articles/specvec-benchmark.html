@@ -18,9 +18,22 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="Compare embedding methods on your own data">
+<script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script>
 </head>
 <body>
-
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -39,7 +52,7 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/specvec-quickstart.html">Get Started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -77,7 +90,17 @@
 
     
     
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/specvec"</span><span class="op">)</span></span></code></pre></div>
+<p>The core methods need only <code>Matrix</code> and
+<code>RSpectra</code>. <code>text2vec</code> is required only for the
+<code>glove</code> method, and <code>FNN</code> only to speed up
+nearest-neighbour queries.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/specvec" class="external-link">specvec</a></span><span class="op">)</span></span></code></pre></div>
 <p>specvec ships its bake-off as a function so you can score the
 embedding methods on your own community data, not only on the data that
@@ -112,7 +135,7 @@ defensible on paper, and each has regimes where it wins. The way to find
 out which one fits a particular dataset is to fit them all under one
 protocol and read the held-out numbers, which is what this function
 does.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/specvec_methods.html">specvec_methods</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "abund_pmi" "ca"        "clr"       "glove"     "pmi"</span></span></code></pre></div>
 <p>The default method, <code>abund_pmi</code>, was chosen this way. The
@@ -122,6 +145,7 @@ binding on your data. A checklist survey with no reliable cover, a
 single habitat type with a narrow species pool, or a small regional
 dataset can all shift the ordering, and the function exists so you can
 check rather than assume.</p>
+</div>
 <div class="section level2">
 <h2 id="a-worked-dataset">A worked dataset<a class="anchor" aria-label="anchor" href="#a-worked-dataset"></a>
 </h2>
@@ -135,7 +159,7 @@ as a habitat label without inventing anything. The co-occurrence metrics
 need only the species table; the habitat and trait metrics need the
 labels and the trait matrix, and the simulation produces both as a
 by-product of the same niche structure.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sim_plots</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">M</span> <span class="op">=</span> <span class="fl">600</span>, <span class="va">S</span> <span class="op">=</span> <span class="fl">150</span>, <span class="va">seed</span> <span class="op">=</span> <span class="fl">1</span>, <span class="va">spread</span> <span class="op">=</span> <span class="fl">1.5</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="va">seed</span><span class="op">)</span></span>
 <span>  <span class="va">mu</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">S</span> <span class="op">*</span> <span class="fl">2</span><span class="op">)</span> <span class="op">*</span> <span class="va">spread</span>, <span class="va">S</span>, <span class="fl">2</span><span class="op">)</span></span>
@@ -178,7 +202,7 @@ ready to become a species trait table.</p>
 <p>We pass the column roles to <code><a href="../reference/specvec.html">specvec()</a></code> and carry the
 habitat column as a plot-level label so it is available to the EUNIS
 metric later. Cover reads on the percent scale by default.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/specvec.html">specvec</a></span><span class="op">(</span><span class="va">df</span>, plot <span class="op">=</span> <span class="st">"plot"</span>, species <span class="op">=</span> <span class="st">"species"</span>,</span>
 <span>             abundance <span class="op">=</span> <span class="st">"cover"</span>, labels <span class="op">=</span> <span class="st">"habitat"</span><span class="op">)</span></span>
 <span><span class="va">x</span></span>
@@ -195,7 +219,7 @@ niche centre is its position on the two environment axes, so the two
 columns of <code>mu</code> are exactly the kind of continuous trait the
 trait metric is built to recover. We name the rows by species id so the
 matrix lines up with the species the embedding learns.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mu</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">df</span>, <span class="st">"mu"</span><span class="op">)</span></span>
 <span><span class="va">trait_matrix</span> <span class="op">&lt;-</span> <span class="va">mu</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">trait_matrix</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"sp"</span>, <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">mu</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
@@ -221,7 +245,7 @@ correspondence analysis (<code>ca</code>), presence PMI
 (<code>pmi</code>), and the abundance-weighted default
 (<code>abund_pmi</code>) across three seeds, at a small dimension so the
 example fits quickly.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_embeddings.html">compare_embeddings</a></span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ca"</span>, <span class="st">"pmi"</span>, <span class="st">"abund_pmi"</span><span class="op">)</span>,</span>
@@ -289,7 +313,7 @@ learned geometry reconstruct the plain count of shared plots. A method
 that scores well on raw-count recovery has encoded co-occurrence
 structure that generalises beyond its own objective, which is the
 property worth selecting on.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">b</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span><span class="va">b</span><span class="op">$</span><span class="va">summary</span><span class="op">$</span><span class="va">metric</span> <span class="op">==</span> <span class="st">"cooc_raw"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"method"</span>, <span class="st">"mean"</span>, <span class="st">"sd"</span>, <span class="st">"n"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;      method      mean          sd n</span></span>
 <span><span class="co">#&gt; 2        ca 0.6898363 0.010882868 3</span></span>
@@ -315,7 +339,7 @@ negatives are not merely absent from the test plots; they are absent
 from everything the model was shown, so a high AUC means the embedding
 pushes pairs that will appear together above pairs it has no
 co-occurrence evidence for at all.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">b</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span><span class="va">b</span><span class="op">$</span><span class="va">summary</span><span class="op">$</span><span class="va">metric</span> <span class="op">==</span> <span class="st">"link_auc"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"method"</span>, <span class="st">"mean"</span>, <span class="st">"sd"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;      method      mean          sd</span></span>
 <span><span class="co">#&gt; 3        ca 0.9348572 0.003780011</span></span>
@@ -339,7 +363,7 @@ same clipping the operator uses, so it downweights common species that
 dominate raw counts by sheer ubiquity. PMI methods optimise a PPMI-style
 objective, so this metric is home-field for them, and it is reported for
 reference rather than used in the verdict.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">b</span><span class="op">$</span><span class="va">summary</span><span class="op">[</span><span class="va">b</span><span class="op">$</span><span class="va">summary</span><span class="op">$</span><span class="va">metric</span> <span class="op">==</span> <span class="st">"cooc_ppmi"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"method"</span>, <span class="st">"mean"</span>, <span class="st">"sd"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;      method      mean          sd</span></span>
 <span><span class="co">#&gt; 1        ca 0.7705946 0.002894009</span></span>
@@ -366,7 +390,7 @@ plots than the threshold, and it runs on the full dataset, so every
 method is handed the identical species index. No method silently drops
 rarer taxa on its own and scores against an easier pair set. The kept
 count is recorded on the run config.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">b</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">n_species</span></span>
 <span><span class="co">#&gt; [1] 150</span></span>
 <span><span class="va">b</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">n_plots</span></span>
@@ -392,7 +416,7 @@ train/test partition of the same plots. Three seeds give a coarse
 estimate of that spread, and more seeds tighten it. The mean across
 seeds is the score, and the sd next to it is how much that score wobbles
 when the split changes.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">b</span><span class="op">$</span><span class="va">raw</span><span class="op">[</span><span class="va">b</span><span class="op">$</span><span class="va">raw</span><span class="op">$</span><span class="va">method</span> <span class="op">==</span> <span class="st">"abund_pmi"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"seed"</span>, <span class="st">"cooc_raw"</span>, <span class="st">"link_auc"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;   seed  cooc_raw  link_auc</span></span>
 <span><span class="co">#&gt; 3    1 0.7528298 0.8440719</span></span>
@@ -414,7 +438,7 @@ exceeds it on both neutral metrics (<code>cooc_raw</code> and
 pooled standard deviation combines the two methods’ across-seed spreads,
 so the gap has to clear roughly two sigma of the noise on each metric,
 and it has to do so on both metrics at once.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">v</span> <span class="op">&lt;-</span> <span class="va">b</span><span class="op">$</span><span class="va">verdict</span></span>
 <span><span class="va">v</span><span class="op">$</span><span class="va">reference</span></span>
 <span><span class="co">#&gt; [1] "ca"</span></span>
@@ -496,7 +520,7 @@ macro-F1 and accuracy against the majority-class baseline.</p>
 <p>The label is the habitat column we carried on the
 <code>specvec</code> object, so we add <code>"eunis"</code> to
 <code>metrics</code> and point <code>labels</code> at that column.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">be</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_embeddings.html">compare_embeddings</a></span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ca"</span>, <span class="st">"pmi"</span>, <span class="st">"abund_pmi"</span><span class="op">)</span>,</span>
@@ -559,7 +583,7 @@ species vectors predicts each held-out species’ trait value from its
 neighbours, and the prediction is scored by R^2. We pass the
 niche-coordinate matrix through <code>traits</code> and add
 <code>"trait"</code> to <code>metrics</code>.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_embeddings.html">compare_embeddings</a></span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ca"</span>, <span class="st">"pmi"</span>, <span class="st">"abund_pmi"</span><span class="op">)</span>,</span>
@@ -599,7 +623,7 @@ co-occurrence; too few and the operator is compressed below its real
 rank, too many and later axes fit noise. We run the same comparison at
 <code>dim = 8</code> and <code>dim = 32</code> and read the neutral
 metric.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">b8</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_embeddings.html">compare_embeddings</a></span><span class="op">(</span><span class="va">x</span>, methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ca"</span>, <span class="st">"abund_pmi"</span><span class="op">)</span>,</span>
 <span>                          metrics <span class="op">=</span> <span class="st">"cooc_raw"</span>, dim <span class="op">=</span> <span class="fl">8</span>,  seeds <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>,</span>
 <span>                          min_occurrence <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
@@ -621,7 +645,7 @@ curve keeps climbing further before it flattens.</p>
 expected score. A single seed gives a point with no spread; more seeds
 estimate the across-seed sd more tightly and make the verdict’s
 two-sigma test meaningful.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">b1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_embeddings.html">compare_embeddings</a></span><span class="op">(</span><span class="va">x</span>, methods <span class="op">=</span> <span class="st">"abund_pmi"</span>, metrics <span class="op">=</span> <span class="st">"cooc_raw"</span>,</span>
 <span>                         dim <span class="op">=</span> <span class="fl">16</span>, seeds <span class="op">=</span> <span class="fl">1</span>, min_occurrence <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="va">b5</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_embeddings.html">compare_embeddings</a></span><span class="op">(</span><span class="va">x</span>, methods <span class="op">=</span> <span class="st">"abund_pmi"</span>, metrics <span class="op">=</span> <span class="st">"cooc_raw"</span>,</span>
@@ -648,15 +672,16 @@ activates only when the <code>text2vec</code> package is installed,
 since that package supplies the GloVe fitter. When <code>text2vec</code>
 is absent, the method prints a note and is skipped, and the rest of the
 comparison runs as usual.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compare_embeddings.html">compare_embeddings</a></span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ca"</span>, <span class="st">"abund_pmi"</span>, <span class="st">"glove"</span><span class="op">)</span>,</span>
 <span>  metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cooc_raw"</span>, <span class="st">"link_auc"</span><span class="op">)</span>,</span>
 <span>  dim <span class="op">=</span> <span class="fl">16</span>, seeds <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, min_occurrence <span class="op">=</span> <span class="fl">3</span></span>
 <span><span class="op">)</span></span>
+<span><span class="co">#&gt; specvec: method 'glove' needs 'text2vec' (Suggests); skipping.</span></span>
 <span><span class="va">bg</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">methods</span></span>
-<span><span class="co">#&gt; [1] "ca"        "abund_pmi" "glove"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "ca"        "abund_pmi"</span></span></code></pre></div>
 <p><code>bg$config$methods</code> lists the methods that actually ran.
 If <code>text2vec</code> is installed it includes <code>glove</code>; if
 not, <code>glove</code> is absent and you will have seen the skip note.
@@ -721,7 +746,7 @@ map onto the <code><a href="../reference/specvec.html">specvec()</a></code> argu
 becomes <code>plot</code>, the taxon becomes <code>species</code>, the
 cover becomes <code>abundance</code>, and the EUNIS column becomes a
 label carried for the habitat metric.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span>
 <span><span class="va">sp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="st">"species_export.csv"</span><span class="op">)</span></span>
 <span><span class="va">sp</span> <span class="op">&lt;-</span> <span class="va">sp</span><span class="op">[</span><span class="va">rank</span> <span class="op">==</span> <span class="st">"species"</span><span class="op">]</span>                       <span class="co"># taxonomic scope is the caller's</span></span>
@@ -765,7 +790,7 @@ own export you know what each column is telling you.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
@@ -775,6 +800,5 @@ own export you know what each column is telling you.</p>
 
 
 
-  
-</body>
+  </body>
 </html>

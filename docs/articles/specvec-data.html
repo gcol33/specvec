@@ -18,9 +18,22 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="Preparing data and cover scales">
+<script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script>
 </head>
 <body>
-
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -39,7 +52,7 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/specvec-quickstart.html">Get Started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -77,7 +90,17 @@
 
     
     
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/specvec"</span><span class="op">)</span></span></code></pre></div>
+<p>The core methods need only <code>Matrix</code> and
+<code>RSpectra</code>. <code>text2vec</code> is required only for the
+<code>glove</code> method, and <code>FNN</code> only to speed up
+nearest-neighbour queries.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/specvec" class="external-link">specvec</a></span><span class="op">)</span></span></code></pre></div>
 <p>Everything in SpecVec starts from one table and one call to
 <code><a href="../reference/specvec.html">specvec()</a></code>. This vignette covers the table’s shape, the
@@ -94,6 +117,7 @@ used, and collapses any repeated records. The sections that follow each
 take one of those steps and show its inputs, its outputs, and the
 argument that controls it. The aim is that by the end you can look at a
 vegetation table from any source and know which arguments to set.</p>
+</div>
 <div class="section level2">
 <h2 id="expected-input">Expected input<a class="anchor" aria-label="anchor" href="#expected-input"></a>
 </h2>
@@ -110,7 +134,7 @@ site-by-species table would need pivoting back to pairs of co-occurring
 species, and the long table already lists them. Three plots and four
 species fit on the page; the European examples later in this vignette
 run to hundreds of thousands of rows with the same three columns.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  plot    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"p1"</span>, <span class="st">"p1"</span>, <span class="st">"p2"</span>, <span class="st">"p2"</span>, <span class="st">"p3"</span>, <span class="st">"p3"</span><span class="op">)</span>,</span>
 <span>  species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Festuca"</span>, <span class="st">"Trifolium"</span>, <span class="st">"Festuca"</span>, <span class="st">"Bromus"</span>, <span class="st">"Festuca"</span>, <span class="st">"Carex"</span><span class="op">)</span>,</span>
@@ -128,7 +152,7 @@ run to hundreds of thousands of rows with the same three columns.</p>
 anything. Here <code>plot</code> is the site id, <code>species</code> is
 the taxon, and <code>cover</code> is the abundance, read on the default
 percent scale.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/specvec.html">specvec</a></span><span class="op">(</span><span class="va">df</span>, plot <span class="op">=</span> <span class="st">"plot"</span>, species <span class="op">=</span> <span class="st">"species"</span>, abundance <span class="op">=</span> <span class="st">"cover"</span><span class="op">)</span></span>
 <span><span class="va">x</span></span>
 <span><span class="co">#&gt; &lt;specvec_data&gt; plots=3  species=4</span></span>
@@ -151,7 +175,7 @@ species, and settings, and the sections below open it up.</p>
 <p>The returned object is a list with named components. <code>P</code>
 and <code>COV</code> are the two sparse matrices the engine reads; the
 rest are index maps and metadata.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "P"       "COV"     "species" "plots"   "time"    "labels"  "meta"</span></span>
 <span><span class="va">x</span><span class="op">$</span><span class="va">species</span></span>
@@ -190,7 +214,7 @@ sparse, so a plot that holds 30 of 50,000 species stores 30 entries, not
 50,000, and an absent species costs nothing in memory. The presence
 methods read <code>P</code>; the cover-weighted methods read
 <code>COV</code>; the same object serves both.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">x</span><span class="op">$</span><span class="va">P</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    Bromus Carex Festuca Trifolium</span></span>
 <span><span class="co">#&gt; p1      0     0       1         1</span></span>
@@ -231,7 +255,7 @@ column as already on <code>[0, 1]</code> and clamps to that range. The
 difference between the two is one factor of 100, and picking the wrong
 one is the most common cover mistake, which is why the standalone
 converter is the quick way to see the values before they go in.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cover_from_scale.html">cover_from_scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">50</span>, <span class="fl">100</span><span class="op">)</span>, scale <span class="op">=</span> <span class="st">"percent"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 0.0 0.5 1.0</span></span>
 <span><span class="fu"><a href="../reference/cover_from_scale.html">cover_from_scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span>, scale <span class="op">=</span> <span class="st">"proportion"</span><span class="op">)</span></span>
@@ -247,7 +271,7 @@ both read as <code>r</code>. The shipped codes are <code>r</code>,
 split forms of class 2. The midpoints run from 0.1 percent for
 <code>r</code> up to 87.5 percent for <code>5</code>, which is the
 centre of the 75 to 100 percent class.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cover_from_scale.html">cover_from_scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"r"</span>, <span class="st">"+"</span>, <span class="st">"2"</span>, <span class="st">"5"</span><span class="op">)</span>, scale <span class="op">=</span> <span class="st">"braun_blanquet"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 0.001 0.005 0.150 0.875</span></span></code></pre></div>
 <p>The Braun-Blanquet midpoints are a documented convention rather than
@@ -260,14 +284,14 @@ with your own named numeric vector of percent midpoints. The names are
 the codes, the values are the percents, and the same vector works
 through <code><a href="../reference/cover_from_scale.html">cover_from_scale()</a></code> or through
 <code><a href="../reference/specvec.html">specvec()</a></code>. Here is a van der Maarel 1-9 ordinal scale:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">vdm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1"</span> <span class="op">=</span> <span class="fl">0.1</span>, <span class="st">"2"</span> <span class="op">=</span> <span class="fl">0.5</span>, <span class="st">"3"</span> <span class="op">=</span> <span class="fl">3</span>, <span class="st">"4"</span> <span class="op">=</span> <span class="fl">10</span>, <span class="st">"5"</span> <span class="op">=</span> <span class="fl">18</span>,</span>
 <span>         <span class="st">"6"</span> <span class="op">=</span> <span class="fl">37.5</span>, <span class="st">"7"</span> <span class="op">=</span> <span class="fl">62.5</span>, <span class="st">"8"</span> <span class="op">=</span> <span class="fl">87.5</span>, <span class="st">"9"</span> <span class="op">=</span> <span class="fl">97.5</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/cover_from_scale.html">cover_from_scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1"</span>, <span class="st">"5"</span>, <span class="st">"9"</span><span class="op">)</span>, scale <span class="op">=</span> <span class="st">"braun_blanquet"</span>, mapping <span class="op">=</span> <span class="va">vdm</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 0.001 0.180 0.975</span></span></code></pre></div>
 <p>Passed to <code><a href="../reference/specvec.html">specvec()</a></code>, the same mapping drives the cover
 column:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  plot <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"q1"</span>, <span class="st">"q1"</span>, <span class="st">"q2"</span><span class="op">)</span>,</span>
 <span>  taxon <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Festuca"</span>, <span class="st">"Carex"</span>, <span class="st">"Festuca"</span><span class="op">)</span>,</span>
@@ -298,7 +322,7 @@ The <code>duplicates</code> argument decides how those rows collapse
 into one cover. The default is <code>"max"</code>, which suits the
 merged-name case where the largest cover is the safest single
 representative.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  plot    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"p1"</span>, <span class="st">"p1"</span>, <span class="st">"p1"</span>, <span class="st">"p2"</span><span class="op">)</span>,</span>
 <span>  species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Festuca"</span>, <span class="st">"Festuca"</span>, <span class="st">"Trifolium"</span>, <span class="st">"Festuca"</span><span class="op">)</span>,</span>
@@ -308,7 +332,7 @@ representative.</p>
 <code>"max"</code> keeps 0.50, <code>"sum"</code> adds the covers to
 0.80, and <code>"first"</code> keeps the row order’s first value,
 0.30.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>  max   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="../reference/specvec.html">specvec</a></span><span class="op">(</span><span class="va">dd</span>, <span class="st">"plot"</span>, <span class="st">"species"</span>, abundance <span class="op">=</span> <span class="st">"cover"</span>,</span>
 <span>                            duplicates <span class="op">=</span> <span class="st">"max"</span><span class="op">)</span><span class="op">$</span><span class="va">COV</span><span class="op">)</span><span class="op">[</span><span class="st">"p1"</span>, <span class="st">"Festuca"</span><span class="op">]</span>,</span>
@@ -325,7 +349,7 @@ adds them; <code>"max"</code> and <code>"first"</code> read them as
 competing estimates and keep one. The count of duplicated pairs is
 recorded on the object regardless of the rule, so you can see whether
 duplicates were present at all:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/specvec.html">specvec</a></span><span class="op">(</span><span class="va">dd</span>, <span class="st">"plot"</span>, <span class="st">"species"</span>, abundance <span class="op">=</span> <span class="st">"cover"</span><span class="op">)</span><span class="op">$</span><span class="va">meta</span><span class="op">$</span><span class="va">n_duplicates</span></span>
 <span><span class="co">#&gt; [1] 1</span></span></code></pre></div>
 <p><code>duplicates = "error"</code> stops with a message naming how
@@ -343,7 +367,7 @@ by plot id. <code>labels</code> is a character vector of plot-level
 column names carried as a data frame, one row per plot. Both are read
 once per plot, taken from the first record of each plot, so they belong
 to the plot rather than to any single species in it.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  plot    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"p1"</span>, <span class="st">"p1"</span>, <span class="st">"p2"</span>, <span class="st">"p2"</span><span class="op">)</span>,</span>
 <span>  species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Festuca"</span>, <span class="st">"Bromus"</span>, <span class="st">"Festuca"</span>, <span class="st">"Carex"</span><span class="op">)</span>,</span>
@@ -381,7 +405,7 @@ name carries no co-occurrence and a record with no plot id cannot be
 placed in a site, so neither contributes and both leave the count. If
 every row turns out invalid, the build stops rather than returning an
 empty object.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dn</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  plot    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"p1"</span>, <span class="st">"p1"</span>, <span class="st">"p2"</span>, <span class="cn">NA</span><span class="op">)</span>,</span>
 <span>  species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Festuca"</span>, <span class="st">"Trifolium"</span>, <span class="st">"Festuca"</span>, <span class="st">"Carex"</span><span class="op">)</span>,</span>
@@ -397,7 +421,7 @@ expected means rows were dropped, and the gap tells you how many. An
 unrecognized Braun-Blanquet code becomes <code>NA</code> with a warning
 that names the offending codes, so a typo surfaces instead of silently
 mapping to a cover.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cover_from_scale.html">cover_from_scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"r"</span>, <span class="st">"2"</span>, <span class="st">"xx"</span><span class="op">)</span>, scale <span class="op">=</span> <span class="st">"braun_blanquet"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: braun_blanquet: 1 unrecognized code(s) set to NA (e.g. xx)</span></span>
 <span><span class="co">#&gt; [1] 0.001 0.150    NA</span></span></code></pre></div>
@@ -421,7 +445,7 @@ its column and read the cover on the scale the archive uses.
 speed base R reading cannot match, and the sparse matrices keep the
 built object small even when the species count runs into the tens of
 thousands.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span>
 <span><span class="va">eva</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="st">"eva_export.csv"</span><span class="op">)</span></span>
 <span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/specvec.html">specvec</a></span><span class="op">(</span></span>
@@ -449,7 +473,7 @@ what the embedding computes.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
@@ -459,6 +483,5 @@ what the embedding computes.</p>
 
 
 
-  
-</body>
+  </body>
 </html>

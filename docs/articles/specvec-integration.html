@@ -18,9 +18,22 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="Alien integration trajectories">
+<script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script>
 </head>
 <body>
-
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -39,7 +52,7 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/specvec-quickstart.html">Get Started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -84,8 +97,19 @@ the focal species’ distance to the native-community centroid through
 time, in one fixed embedding frame. A falling distance is integration.
 The neophyte’s associates shift from where it arrived toward the native
 community.</p>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/specvec"</span><span class="op">)</span></span></code></pre></div>
+<p>The core methods need only <code>Matrix</code> and
+<code>RSpectra</code>. <code>text2vec</code> is required only for the
+<code>glove</code> method, and <code>FNN</code> only to speed up
+nearest-neighbour queries.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/specvec" class="external-link">specvec</a></span><span class="op">)</span></span></code></pre></div>
+</div>
 <div class="section level2">
 <h2 id="what-integration-means-here">What integration means here<a class="anchor" aria-label="anchor" href="#what-integration-means-here"></a>
 </h2>
@@ -159,7 +183,7 @@ pool throughout and never drifts. The <code>weed</code> is the control:
 a species that arrives and persists without integrating, so the method
 should report a falling distance for the <code>alien</code> and a flat
 one for the <code>weed</code>.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sim_invasion</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">seed</span> <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="va">seed</span><span class="op">)</span></span>
 <span>  <span class="va">native</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"nat"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">8</span><span class="op">)</span></span>
@@ -222,7 +246,7 @@ weed’s should stay roughly where it started.</p>
 target. We leave <code>frame</code> at its default, so the frame is
 fitted on every species except the focal one, which keeps the ruderal
 pole in the coordinate system.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">natives</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"nat"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">8</span><span class="op">)</span></span>
 <span><span class="va">it</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/integration_trajectory.html">integration_trajectory</a></span><span class="op">(</span><span class="va">x</span>, species <span class="op">=</span> <span class="st">"alien"</span>, native <span class="op">=</span> <span class="va">natives</span>,</span>
 <span>                             dim <span class="op">=</span> <span class="fl">16</span>, min_occurrence <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
@@ -241,95 +265,12 @@ Each block lists, per window, the plots in the window
 (<code>n_plots</code>), the focal-bearing plots (<code>support</code>),
 and the focal-to-native distance. The distance falls decade by decade as
 the alien’s co-occurrents shift into the native community.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">it</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">center</span>, <span class="va">d</span><span class="op">$</span><span class="va">distance</span>, type <span class="op">=</span> <span class="st">"b"</span>, pch <span class="op">=</span> <span class="fl">19</span>,</span>
 <span>     xlab <span class="op">=</span> <span class="st">"decade"</span>, ylab <span class="op">=</span> <span class="st">"distance to native centroid"</span>,</span>
 <span>     main <span class="op">=</span> <span class="st">"alien integration over time"</span><span class="op">)</span></span></code></pre></div>
-<p><div class="svg-container"><button type="button" class="btn btn-primary btn-copy-svg" title="Copy SVG to clipboard" aria-label="Copy SVG to clipboard" data-bs-toggle="tooltip" data-bs-placement="left"><i class="fa fa-copy"></i></button>
-<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='504.00pt' height='288.00pt' viewBox='0 0 504.00 288.00' class="r-plt inline-svg" style="max-width:100%;width:100%;height:auto;">
-<g class='svglite'>
-<defs>
-  <style type='text/css'><![CDATA[
-    /* theme-aware-processed */
-    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite circle {
-      fill: none;
-      stroke: #3E3F3A;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-miterlimit: 10.00;
-    }
-    .svglite > g > rect {
-      fill: none;
-      stroke: #3E3F3A;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-miterlimit: 10.00;
-    }
-    .svglite text {
-      white-space: pre;
-      fill: #3E3F3A;
-    }
-    .svglite g.glyphgroup path {
-      fill: inherit;
-      stroke: none;
-    }
-  ]]></style>
-</defs>
-<rect width='100%' height='100%' style='stroke: none; fill: #F5F6F8;'/>
-<defs>
-  <clipPath id='cpMC4wMHw1MDQuMDB8MC4wMHwyODguMDA='>
-    <rect x='0.00' y='0.00' width='504.00' height='288.00' />
-  </clipPath>
-</defs>
-<g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwyODguMDA=)'>
-</g>
-<defs>
-  <clipPath id='cpNTkuMDR8NDczLjc2fDU5LjA0fDIxNC41Ng=='>
-    <rect x='59.04' y='59.04' width='414.72' height='155.52' />
-  </clipPath>
-</defs>
-<g clip-path='url(#cpNTkuMDR8NDczLjc2fDU5LjA0fDIxNC41Ng==)'>
-<line x1='81.19' y1='67.19' x2='195.61' y2='107.46' style='stroke-width: 0.75;' />
-<line x1='209.20' y1='112.21' x2='323.60' y2='151.82' style='stroke-width: 0.75;' />
-<line x1='337.02' y1='157.01' x2='451.78' y2='205.97' style='stroke-width: 0.75;' />
-<circle cx='74.40' cy='64.80' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
-<circle cx='202.40' cy='109.86' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
-<circle cx='330.40' cy='154.18' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
-<circle cx='458.40' cy='208.80' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
-</g>
-<g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwyODguMDA=)'>
-<line x1='74.40' y1='214.56' x2='458.40' y2='214.56' style='stroke-width: 0.75;' />
-<line x1='74.40' y1='214.56' x2='74.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='138.40' y1='214.56' x2='138.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='202.40' y1='214.56' x2='202.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='266.40' y1='214.56' x2='266.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='330.40' y1='214.56' x2='330.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='394.40' y1='214.56' x2='394.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='458.40' y1='214.56' x2='458.40' y2='221.76' style='stroke-width: 0.75;' />
-<text x='74.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>1990</text>
-<text x='138.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>1995</text>
-<text x='202.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2000</text>
-<text x='266.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2005</text>
-<text x='330.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2010</text>
-<text x='394.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2015</text>
-<text x='458.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2020</text>
-<line x1='59.04' y1='209.81' x2='59.04' y2='67.78' style='stroke-width: 0.75;' />
-<line x1='59.04' y1='209.81' x2='51.84' y2='209.81' style='stroke-width: 0.75;' />
-<line x1='59.04' y1='162.47' x2='51.84' y2='162.47' style='stroke-width: 0.75;' />
-<line x1='59.04' y1='115.13' x2='51.84' y2='115.13' style='stroke-width: 0.75;' />
-<line x1='59.04' y1='67.78' x2='51.84' y2='67.78' style='stroke-width: 0.75;' />
-<text transform='translate(41.76,209.81) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>0.0</text>
-<text transform='translate(41.76,162.47) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>0.5</text>
-<text transform='translate(41.76,115.13) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>1.0</text>
-<text transform='translate(41.76,67.78) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>1.5</text>
-<polygon points='59.04,214.56 473.76,214.56 473.76,59.04 59.04,59.04 ' style='stroke-width: 0.75;' />
-<text x='266.40' y='34.67' text-anchor='middle' style='font-size: 14.40px; font-weight: bold; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='179.16px' lengthAdjust='spacingAndGlyphs'>alien integration over time</text>
-<text x='266.40' y='269.28' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='39.36px' lengthAdjust='spacingAndGlyphs'>decade</text>
-<text transform='translate(12.96,136.80) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='139.38px' lengthAdjust='spacingAndGlyphs'>distance to native centroid</text>
-</g>
-</g>
-</svg></div></p>
+<p><img src="specvec-integration_files/figure-html/plot-1.svg" class="r-plt" alt="" width="672"></p>
 </div>
 <div class="section level2">
 <h2 id="reading-the-support-columns">Reading the support columns<a class="anchor" aria-label="anchor" href="#reading-the-support-columns"></a>
@@ -337,7 +278,7 @@ the alien’s co-occurrents shift into the native community.</p>
 <p><code><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame()</a></code> tidies the integration object into one
 row per focal-species-by-window cell, and the columns say exactly how
 much data backs each distance.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">it</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   species window center n_plots support native_support   distance</span></span>
 <span><span class="co">#&gt; 1   alien   1990   1990     300     120             60 1.53150716</span></span>
@@ -382,7 +323,7 @@ care about rather than against the resident pool at large.</li>
 </ul>
 <p>To see why the frame has to be the broad pool, we can fit it on the
 native subset alone and watch the early window break.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">it_nat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/integration_trajectory.html">integration_trajectory</a></span><span class="op">(</span><span class="va">x</span>, species <span class="op">=</span> <span class="st">"alien"</span>, frame <span class="op">=</span> <span class="va">natives</span>,</span>
 <span>                                 native <span class="op">=</span> <span class="va">natives</span>, dim <span class="op">=</span> <span class="fl">16</span>, min_occurrence <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">it_nat</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"window"</span>, <span class="st">"support"</span>, <span class="st">"native_support"</span>, <span class="st">"distance"</span><span class="op">)</span><span class="op">]</span></span>
@@ -410,7 +351,7 @@ happens and stays flat when it does not. The simulation already contains
 the test: the <code>weed</code> is a species that arrives, persists, and
 never leaves the ruderal pool. Tracing both focal species at once puts
 them in the same frame and the same windows.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">itb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/integration_trajectory.html">integration_trajectory</a></span><span class="op">(</span><span class="va">x</span>, species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"alien"</span>, <span class="st">"weed"</span><span class="op">)</span>, native <span class="op">=</span> <span class="va">natives</span>,</span>
 <span>                              dim <span class="op">=</span> <span class="fl">16</span>, min_occurrence <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="va">db</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">itb</span><span class="op">)</span></span>
@@ -429,7 +370,7 @@ weed’s stays near 1.5 in every decade. The weed never changes the
 company it keeps, so it never moves toward the native centroid, and the
 method reports no integration. Plotting the two curves together shows
 the specificity directly.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">da</span> <span class="op">&lt;-</span> <span class="va">db</span><span class="op">[</span><span class="va">db</span><span class="op">$</span><span class="va">species</span> <span class="op">==</span> <span class="st">"alien"</span>, <span class="op">]</span></span>
 <span><span class="va">dw</span> <span class="op">&lt;-</span> <span class="va">db</span><span class="op">[</span><span class="va">db</span><span class="op">$</span><span class="va">species</span> <span class="op">==</span> <span class="st">"weed"</span>, <span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">da</span><span class="op">$</span><span class="va">center</span>, <span class="va">da</span><span class="op">$</span><span class="va">distance</span>, type <span class="op">=</span> <span class="st">"b"</span>, pch <span class="op">=</span> <span class="fl">19</span>, ylim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1.7</span><span class="op">)</span>,</span>
@@ -437,105 +378,7 @@ the specificity directly.</p>
 <span>     main <span class="op">=</span> <span class="st">"integrating alien vs non-integrating weed"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/lines.html" class="external-link">lines</a></span><span class="op">(</span><span class="va">dw</span><span class="op">$</span><span class="va">center</span>, <span class="va">dw</span><span class="op">$</span><span class="va">distance</span>, type <span class="op">=</span> <span class="st">"b"</span>, pch <span class="op">=</span> <span class="fl">17</span>, lty <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend</a></span><span class="op">(</span><span class="st">"topright"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"alien"</span>, <span class="st">"weed"</span><span class="op">)</span>, pch <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">19</span>, <span class="fl">17</span><span class="op">)</span>, lty <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, bty <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span></span></code></pre></div>
-<p><div class="svg-container"><button type="button" class="btn btn-primary btn-copy-svg" title="Copy SVG to clipboard" aria-label="Copy SVG to clipboard" data-bs-toggle="tooltip" data-bs-placement="left"><i class="fa fa-copy"></i></button>
-<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='504.00pt' height='288.00pt' viewBox='0 0 504.00 288.00' class="r-plt inline-svg" style="max-width:100%;width:100%;height:auto;">
-<g class='svglite'>
-<defs>
-  <style type='text/css'><![CDATA[
-    /* theme-aware-processed */
-    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite circle {
-      fill: none;
-      stroke: #3E3F3A;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-miterlimit: 10.00;
-    }
-    .svglite > g > rect {
-      fill: none;
-      stroke: #3E3F3A;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-miterlimit: 10.00;
-    }
-    .svglite text {
-      white-space: pre;
-      fill: #3E3F3A;
-    }
-    .svglite g.glyphgroup path {
-      fill: inherit;
-      stroke: none;
-    }
-  ]]></style>
-</defs>
-<rect width='100%' height='100%' style='stroke: none; fill: #F5F6F8;'/>
-<defs>
-  <clipPath id='cpMC4wMHw1MDQuMDB8MC4wMHwyODguMDA='>
-    <rect x='0.00' y='0.00' width='504.00' height='288.00' />
-  </clipPath>
-</defs>
-<g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwyODguMDA=)'>
-</g>
-<defs>
-  <clipPath id='cpNTkuMDR8NDczLjc2fDU5LjA0fDIxNC41Ng=='>
-    <rect x='59.04' y='59.04' width='414.72' height='155.52' />
-  </clipPath>
-</defs>
-<g clip-path='url(#cpNTkuMDR8NDczLjc2fDU5LjA0fDIxNC41Ng==)'>
-<line x1='81.27' y1='81.68' x2='195.53' y2='117.54' style='stroke-width: 0.75;' />
-<line x1='209.28' y1='121.82' x2='323.52' y2='157.09' style='stroke-width: 0.75;' />
-<line x1='337.13' y1='161.77' x2='451.67' y2='205.34' style='stroke-width: 0.75;' />
-<circle cx='74.40' cy='79.53' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
-<circle cx='202.40' cy='119.70' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
-<circle cx='330.40' cy='159.21' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
-<circle cx='458.40' cy='207.90' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
-</g>
-<g clip-path='url(#cpMC4wMHw1MDQuMDB8MC4wMHwyODguMDA=)'>
-<line x1='74.40' y1='214.56' x2='458.40' y2='214.56' style='stroke-width: 0.75;' />
-<line x1='74.40' y1='214.56' x2='74.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='138.40' y1='214.56' x2='138.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='202.40' y1='214.56' x2='202.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='266.40' y1='214.56' x2='266.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='330.40' y1='214.56' x2='330.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='394.40' y1='214.56' x2='394.40' y2='221.76' style='stroke-width: 0.75;' />
-<line x1='458.40' y1='214.56' x2='458.40' y2='221.76' style='stroke-width: 0.75;' />
-<text x='74.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>1990</text>
-<text x='138.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>1995</text>
-<text x='202.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2000</text>
-<text x='266.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2005</text>
-<text x='330.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2010</text>
-<text x='394.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2015</text>
-<text x='458.40' y='240.48' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='26.69px' lengthAdjust='spacingAndGlyphs'>2020</text>
-<line x1='59.04' y1='208.80' x2='59.04' y2='81.74' style='stroke-width: 0.75;' />
-<line x1='59.04' y1='208.80' x2='51.84' y2='208.80' style='stroke-width: 0.75;' />
-<line x1='59.04' y1='166.45' x2='51.84' y2='166.45' style='stroke-width: 0.75;' />
-<line x1='59.04' y1='124.09' x2='51.84' y2='124.09' style='stroke-width: 0.75;' />
-<line x1='59.04' y1='81.74' x2='51.84' y2='81.74' style='stroke-width: 0.75;' />
-<text transform='translate(41.76,208.80) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>0.0</text>
-<text transform='translate(41.76,166.45) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>0.5</text>
-<text transform='translate(41.76,124.09) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>1.0</text>
-<text transform='translate(41.76,81.74) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='16.67px' lengthAdjust='spacingAndGlyphs'>1.5</text>
-<polygon points='59.04,214.56 473.76,214.56 473.76,59.04 59.04,59.04 ' style='stroke-width: 0.75;' />
-<text x='266.40' y='34.67' text-anchor='middle' style='font-size: 14.40px; font-weight: bold; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='280.72px' lengthAdjust='spacingAndGlyphs'>integrating alien vs non-integrating weed</text>
-<text x='266.40' y='269.28' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='39.36px' lengthAdjust='spacingAndGlyphs'>decade</text>
-<text transform='translate(12.96,136.80) rotate(-90)' text-anchor='middle' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='139.38px' lengthAdjust='spacingAndGlyphs'>distance to native centroid</text>
-</g>
-<g clip-path='url(#cpNTkuMDR8NDczLjc2fDU5LjA0fDIxNC41Ng==)'>
-<line x1='81.60' y1='79.58' x2='195.20' y2='80.28' style='stroke-width: 0.75; stroke-dasharray: 4.00,4.00;' />
-<line x1='209.60' y1='80.30' x2='323.20' y2='80.01' style='stroke-width: 0.75; stroke-dasharray: 4.00,4.00;' />
-<line x1='337.60' y1='79.99' x2='451.20' y2='79.85' style='stroke-width: 0.75; stroke-dasharray: 4.00,4.00;' />
-<polygon points='74.40,75.33 78.04,81.63 70.76,81.63 ' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
-<polygon points='202.40,76.12 206.04,82.42 198.76,82.42 ' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
-<polygon points='330.40,75.79 334.04,82.09 326.76,82.09 ' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
-<polygon points='458.40,75.64 462.04,81.94 454.76,81.94 ' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
-<line x1='407.27' y1='73.44' x2='428.87' y2='73.44' style='stroke-width: 0.75;' />
-<line x1='407.27' y1='87.84' x2='428.87' y2='87.84' style='stroke-width: 0.75; stroke-dasharray: 4.00,4.00;' />
-<circle cx='418.07' cy='73.44' r='2.70' style='stroke-width: 0.75; fill: #000000;' />
-<polygon points='418.07,83.64 421.71,89.94 414.44,89.94 ' style='stroke-width: 0.75; stroke: none; fill: #000000;' />
-<text x='439.67' y='77.74' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='25.36px' lengthAdjust='spacingAndGlyphs'>alien</text>
-<text x='439.67' y='92.14' style='font-size: 12.00px; font-family: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;' textLength='28.69px' lengthAdjust='spacingAndGlyphs'>weed</text>
-</g>
-</g>
-</svg></div></p>
+<p><img src="specvec-integration_files/figure-html/control-plot-1.svg" class="r-plt" alt="" width="672"></p>
 <p>The contrast is the model comparison that the applied question needs.
 A single falling curve says a species integrated; the flat control curve
 says the falling curve is specific to integration rather than an
@@ -553,7 +396,7 @@ minus the cosine similarity, so a smaller value still means closer, but
 it measures the angle between the focal vector and the native centroid
 rather than the gap between them. Cosine reads the direction of the
 company a species keeps and ignores the length of its vector.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">it_euc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/integration_trajectory.html">integration_trajectory</a></span><span class="op">(</span><span class="va">x</span>, species <span class="op">=</span> <span class="st">"alien"</span>, native <span class="op">=</span> <span class="va">natives</span>,</span>
 <span>                                 dim <span class="op">=</span> <span class="fl">16</span>, min_occurrence <span class="op">=</span> <span class="fl">3</span>, metric <span class="op">=</span> <span class="st">"euclidean"</span><span class="op">)</span></span>
 <span><span class="va">it_cos</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/integration_trajectory.html">integration_trajectory</a></span><span class="op">(</span><span class="va">x</span>, species <span class="op">=</span> <span class="st">"alien"</span>, native <span class="op">=</span> <span class="va">natives</span>,</span>
@@ -586,7 +429,7 @@ signal is a property of the construction rather than of one random seed,
 we re-simulate over several seeds and collect the net drop in distance,
 from the first window to the last, for each. We keep <code>dim</code>
 small so each fit is quick.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">net_drop</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">seed</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">xs</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/specvec.html">specvec</a></span><span class="op">(</span><span class="fu">sim_invasion</span><span class="op">(</span><span class="va">seed</span><span class="op">)</span>, <span class="st">"plot"</span>, <span class="st">"species"</span>,</span>
 <span>                abundance <span class="op">=</span> <span class="st">"cover"</span>, time <span class="op">=</span> <span class="st">"decade"</span><span class="op">)</span></span>
@@ -665,7 +508,7 @@ status, and a ReSurvey flag. The native set comes from the status
 column, and the ReSurvey flag selects the resampled plots. The block
 below sketches the path on real exports; it does not run here because it
 reads external files.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-datatable.com" class="external-link">data.table</a></span><span class="op">)</span></span>
 <span><span class="va">sp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="st">"species_export.csv"</span><span class="op">)</span></span>
 <span><span class="va">hd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/data.table/man/fread.html" class="external-link">fread</a></span><span class="op">(</span><span class="st">"header_export.csv"</span><span class="op">)</span>                 <span class="co"># plot-level: decade, ReSurvey flag</span></span>
@@ -750,7 +593,7 @@ plots, the native set, and the support all hold up.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
@@ -760,84 +603,5 @@ plots, the native set, and the support all hold up.</p>
 
 
 
-  
-<script>
-/* SVG Copy Button Functionality */
-(function() {
-  "use strict";
-
-  // Initialize SVG copy buttons after DOM is ready
-  document.addEventListener("DOMContentLoaded", function() {
-    if (typeof ClipboardJS === "undefined") {
-      console.warn("ClipboardJS not loaded - SVG copy buttons disabled");
-      return;
-    }
-
-    // Initialize clipboard for SVG copy buttons
-    var svgClipboard = new ClipboardJS(".btn-copy-svg", {
-      text: function(trigger) {
-        var container = trigger.closest(".svg-container");
-        if (!container) return "";
-
-        var svg = container.querySelector("svg");
-        if (!svg) return "";
-
-        // Clone SVG to avoid modifying the original
-        var clone = svg.cloneNode(true);
-
-        // Remove inline-svg class (not needed in copied version)
-        clone.classList.remove("inline-svg");
-
-        // Add XML declaration and serialize
-        var serializer = new XMLSerializer();
-        var svgString = serializer.serializeToString(clone);
-
-        // Add XML declaration if not present
-        if (!svgString.startsWith("<?xml")) {
-          svgString = '<?xml version="1.0" encoding="UTF-8"?>\n' + svgString;
-        }
-
-        return svgString;
-      }
-    });
-
-    // Handle success
-    svgClipboard.on("success", function(e) {
-      var btn = e.trigger;
-      var originalTitle = btn.getAttribute("data-bs-original-title") || btn.getAttribute("title");
-
-      // Update tooltip to show "Copied!"
-      btn.setAttribute("data-bs-original-title", "Copied!");
-      var tooltip = bootstrap.Tooltip.getInstance(btn);
-      if (tooltip) {
-        tooltip.show();
-      }
-
-      // Reset after delay
-      setTimeout(function() {
-        btn.setAttribute("data-bs-original-title", originalTitle);
-      }, 1500);
-
-      e.clearSelection();
-    });
-
-    // Handle error
-    svgClipboard.on("error", function(e) {
-      var btn = e.trigger;
-      btn.setAttribute("data-bs-original-title", "Press Ctrl+C to copy");
-      var tooltip = bootstrap.Tooltip.getInstance(btn);
-      if (tooltip) {
-        tooltip.show();
-      }
-    });
-
-    // Initialize tooltips for SVG copy buttons
-    var svgCopyButtons = document.querySelectorAll(".btn-copy-svg");
-    svgCopyButtons.forEach(function(btn) {
-      new bootstrap.Tooltip(btn, { container: "body" });
-    });
-  });
-})();
-</script>
-</body>
+  </body>
 </html>

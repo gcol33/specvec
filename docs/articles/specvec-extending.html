@@ -18,9 +18,22 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
 <meta property="og:title" content="Extending specvec: weightings, factorizations, methods">
+<script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script>
 </head>
 <body>
-
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -39,7 +52,7 @@
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="../articles/specvec-quickstart.html">Get Started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
-<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
+<li class="active nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -77,7 +90,17 @@
 
     
     
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/specvec"</span><span class="op">)</span></span></code></pre></div>
+<p>The core methods need only <code>Matrix</code> and
+<code>RSpectra</code>. <code>text2vec</code> is required only for the
+<code>glove</code> method, and <code>FNN</code> only to speed up
+nearest-neighbour queries.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/specvec" class="external-link">specvec</a></span><span class="op">)</span></span></code></pre></div>
 <p>The methods that ship with SpecVec are points on a grid, and the grid
 is open. A new weighting, a new factorization, or a new ordinal cover
@@ -90,6 +113,7 @@ engine rejects. The first two add operands; the third adds a readout
 over operands the package already builds, which is the other axis of the
 grid. The companion <code><a href="../articles/specvec-methods.html">vignette("specvec-methods")</a></code> covers the
 built-in operators those examples build on.</p>
+</div>
 <div class="section level2">
 <h2 id="the-registry-model">The registry model<a class="anchor" aria-label="anchor" href="#the-registry-model"></a>
 </h2>
@@ -106,7 +130,7 @@ such records. <code>pmi</code> and <code>abund_pmi</code> reuse the
 <code>svd</code> and the GloVe objective, and a sixth method that reused
 an existing weighting would be one more <code><a href="../reference/register_method.html">register_method()</a></code>
 line rather than one more code path.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/specvec_methods.html">specvec_methods</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "abund_pmi" "ca"        "clr"       "glove"     "pmi"</span></span></code></pre></div>
 <p>Three registries sit behind those names.
@@ -168,7 +192,7 @@ a corner of, and the embedding dimension stays at six or fewer, which is
 more than the latent structure needs and small enough to fit instantly.
 <code>set.seed(1)</code> fixes the simulation so the numbers below
 reproduce.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">n_plots</span> <span class="op">&lt;-</span> <span class="fl">60L</span>; <span class="va">n_sp</span> <span class="op">&lt;-</span> <span class="fl">12L</span></span>
 <span><span class="va">niche</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n_sp</span><span class="op">)</span></span>
@@ -196,7 +220,7 @@ operator, so the species by species form is visible without fitting
 anything. The counts operator is the plain co-occurrence matrix: entry
 <code>[a, b]</code> is the number of plots holding both species, and the
 diagonal is each species’ occurrence count.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">Cc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cooc_matrix.html">cooc_matrix</a></span><span class="op">(</span><span class="va">x</span>, <span class="st">"counts"</span>, min_occurrence <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">Cc</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "dgCMatrix"</span></span>
@@ -211,7 +235,7 @@ The PPMI operator runs the same co-occurrence count through a positive
 pointwise mutual information transform: the count is compared against
 the product of the two marginals, the logarithm of the ratio is taken,
 and anything below zero is clipped to zero.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">Cp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cooc_matrix.html">cooc_matrix</a></span><span class="op">(</span><span class="va">x</span>, <span class="st">"ppmi"</span>, min_occurrence <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">Cp</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 12 12</span></span>
@@ -257,7 +281,7 @@ numeric proportion in <code>[0, 1]</code>, with <code>NA</code> for any
 value it does not recognize. The <code>NA</code> is a signal the
 imputation step reads: unrecognized or missing entries are filled
 downstream with the column median.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/register_cover_scale.html">register_cover_scale</a></span><span class="op">(</span><span class="st">"vdm"</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span>, <span class="va">mapping</span> <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>`1` <span class="op">=</span> <span class="fl">0.1</span>, `2` <span class="op">=</span> <span class="fl">0.5</span>, `3` <span class="op">=</span> <span class="fl">1.5</span>, `4` <span class="op">=</span> <span class="fl">3</span>, `5` <span class="op">=</span> <span class="fl">8</span>,</span>
 <span>         `6` <span class="op">=</span> <span class="fl">18</span>, `7` <span class="op">=</span> <span class="fl">37.5</span>, `8` <span class="op">=</span> <span class="fl">62.5</span>, `9` <span class="op">=</span> <span class="fl">87.5</span><span class="op">)</span></span>
@@ -274,7 +298,7 @@ for any code absent from <code>m</code>),
 and dividing by 100 returns the proportion. The scale is now usable
 through <code><a href="../reference/cover_from_scale.html">cover_from_scale()</a></code>, the front door every scale
 shares.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/cover_from_scale.html">cover_from_scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1"</span>, <span class="st">"5"</span>, <span class="st">"9"</span><span class="op">)</span>, <span class="st">"vdm"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 0.001 0.080 0.875</span></span></code></pre></div>
 <p>Class 1 returns 0.001, class 5 returns 0.08, class 9 returns 0.875,
@@ -285,7 +309,7 @@ result as proportions. The <code>cover_scale</code> argument of
 freshly registered scale is applied at the
 <code><a href="../reference/cover_from_scale.html">cover_from_scale()</a></code> step rather than passed by name into
 <code><a href="../reference/specvec.html">specvec()</a></code>.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">veg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>plot <span class="op">=</span> <span class="va">df</span><span class="op">$</span><span class="va">plot</span>, species <span class="op">=</span> <span class="va">df</span><span class="op">$</span><span class="va">species</span>,</span>
 <span>                  vdm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">9</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">df</span><span class="op">)</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">veg</span><span class="op">$</span><span class="va">cover_prop</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cover_from_scale.html">cover_from_scale</a></span><span class="op">(</span><span class="va">veg</span><span class="op">$</span><span class="va">vdm</span>, <span class="st">"vdm"</span><span class="op">)</span></span>
@@ -318,7 +342,7 @@ ship: the fraction of plots holding either of two species that hold
 both. It is symmetric and bounded in <code>[0, 1]</code>, which makes it
 a <code>kind = "sym"</code> operator that <code>eigen</code> can take
 directly. The function below builds it.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">jaccard_weighting</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span>, <span class="va">ks</span>, <span class="va">n_plots</span>, <span class="va">min_cooccurrence</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">P</span> <span class="op">&lt;-</span> <span class="va">data</span><span class="op">$</span><span class="va">P</span><span class="op">[</span>, <span class="va">ks</span>, drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
 <span>  <span class="va">C</span> <span class="op">&lt;-</span> <span class="fu">Matrix</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/matmult-methods.html" class="external-link">crossprod</a></span><span class="op">(</span><span class="va">P</span><span class="op">)</span>                 <span class="co"># species x species co-occurrence counts; diag = occurrence</span></span>
@@ -357,7 +381,7 @@ records the function under a name, declaring its input shape and that it
 does not read cover. <code><a href="../reference/register_method.html">register_method()</a></code> pairs that weighting
 with the <code>eigen</code> factorization under a friendly method
 name.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/register_weighting.html">register_weighting</a></span><span class="op">(</span><span class="st">"jaccard"</span>, <span class="va">jaccard_weighting</span>,</span>
 <span>                   input <span class="op">=</span> <span class="st">"species_species"</span>, supports_abundance <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/register_method.html">register_method</a></span><span class="op">(</span><span class="st">"jaccard"</span>, weighting <span class="op">=</span> <span class="st">"jaccard"</span>, factorization <span class="op">=</span> <span class="st">"eigen"</span>,</span>
@@ -369,7 +393,7 @@ ordinary front door. <code><a href="../reference/species_embedding.html">species
 record, runs <code>jaccard_weighting</code> to build the symmetric
 operator, checks that <code>eigen</code> accepts the <code>"sym"</code>
 kind it produced, and takes the top eigenpairs.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">emb</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/species_embedding.html">species_embedding</a></span><span class="op">(</span><span class="va">x</span>, method <span class="op">=</span> <span class="st">"jaccard"</span>, dim <span class="op">=</span> <span class="fl">6</span>, min_occurrence <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">emb</span><span class="op">$</span><span class="va">V</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 12  6</span></span>
@@ -409,7 +433,7 @@ the engine refuses. Calling <code><a href="../reference/species_embedding.html">
 <code>method = NULL</code> and an explicit
 <code>weighting</code>/<code>factorization</code> pair forces exactly
 that mismatch.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/species_embedding.html">species_embedding</a></span><span class="op">(</span><span class="va">x</span>, weighting <span class="op">=</span> <span class="st">"jaccard"</span>, factorization <span class="op">=</span> <span class="st">"svd"</span>,</span>
 <span>                  method <span class="op">=</span> <span class="cn">NULL</span>, dim <span class="op">=</span> <span class="fl">6</span>, min_occurrence <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #BBBB00; font-weight: bold;">Error</span><span style="font-weight: bold;">:</span></span></span>
@@ -466,7 +490,7 @@ be deterministic. The body below uses base R, <code>Matrix</code>, and
 <code>RSpectra</code> and nothing else. The function
 <code>diffusion_map</code> here is the author’s own code, not part of
 the SpecVec API.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">diffusion_map</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">op</span>, <span class="va">dim</span>, <span class="va">...</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">M</span> <span class="op">&lt;-</span> <span class="va">op</span><span class="op">$</span><span class="va">M</span></span>
 <span>  <span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu">Matrix</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/colSums-methods.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">M</span><span class="op">)</span><span class="op">)</span>            <span class="co"># species degree</span></span>
@@ -501,7 +525,7 @@ the deliberate difference from <code>eigen</code>: the Laplacian
 eigenmap reads geometry from the normalized spectrum, while
 <code>eigen</code> reads amplitude from the raw one. One registration
 adds it to the factorization registry.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/register_factorization.html">register_factorization</a></span><span class="op">(</span><span class="st">"diffusion"</span>, <span class="va">diffusion_map</span>,</span>
 <span>                       kind <span class="op">=</span> <span class="st">"matrix"</span>, accepts <span class="op">=</span> <span class="st">"sym"</span><span class="op">)</span></span>
 <span><span class="st">"diffusion"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="../reference/specvec_methods.html">specvec_methods</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -516,7 +540,7 @@ factorization names the one operator kind it reads, and from that moment
 it pairs with every weighting that produces that kind. We fit it against
 the PPMI operator by naming the two halves directly, with
 <code>method = NULL</code>.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">emb_d</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/species_embedding.html">species_embedding</a></span><span class="op">(</span><span class="va">x</span>, weighting <span class="op">=</span> <span class="st">"ppmi"</span>, factorization <span class="op">=</span> <span class="st">"diffusion"</span>,</span>
 <span>                           method <span class="op">=</span> <span class="cn">NULL</span>, dim <span class="op">=</span> <span class="fl">6</span>, min_occurrence <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">emb_d</span><span class="op">$</span><span class="va">V</span><span class="op">)</span></span>
@@ -540,7 +564,7 @@ against every <code>"sym"</code> weighting at once. The
 abundance-weighted operator and the Jaccard operator registered earlier
 are both <code>"sym"</code>, so the new factorization reads them with no
 edit to either.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">emb_a</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/species_embedding.html">species_embedding</a></span><span class="op">(</span><span class="va">x</span>, weighting <span class="op">=</span> <span class="st">"abundance_pmi"</span>,</span>
 <span>                           factorization <span class="op">=</span> <span class="st">"diffusion"</span>,</span>
 <span>                           method <span class="op">=</span> <span class="cn">NULL</span>, dim <span class="op">=</span> <span class="fl">6</span>, min_occurrence <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
@@ -674,7 +698,7 @@ factorization over an operand SpecVec already builds.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
@@ -684,6 +708,5 @@ factorization over an operand SpecVec already builds.</p>
 
 
 
-  
-</body>
+  </body>
 </html>

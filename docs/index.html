@@ -22,9 +22,22 @@
 ">
 <meta property="og:description" content="Turn a long plot-species-cover table into abundance-aware species and community embeddings, with a benchmark harness for scoring embedding methods on neutral ecological tasks.
 ">
+<script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script>
 </head>
 <body>
-
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -70,10 +83,21 @@
 <div class="page-header"><h1 id="specvec">specvec<a class="anchor" aria-label="anchor" href="#specvec"></a>
 </h1></div>
 <p><em>species and communities as points in one space</em></p>
-<p><a href="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></p>
+<p><a href="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/gcol33/specvec" class="external-link"><img src="https://codecov.io/gh/gcol33/specvec/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></p>
 <p><strong>Abundance-weighted PMI embeddings of species co-occurrence, with first-class community vectors and a method bake-off.</strong></p>
 <p>Feed it a long <code>plot x species (x cover)</code> table. <code>specvec</code> turns the co-occurrence into dense vectors through a sparse eigendecomposition (<code>Matrix</code> + <code>RSpectra</code>): every species becomes a point, every plot becomes a point in the same space, and species that keep the same company sit close together. Cover enters the weighting, so a dominant species counts for more than a trace occurrence. A plot-by-species table records who occurs where; <code>specvec</code> reads off which species behave alike and places communities and species in one comparable space.</p>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/specvec"</span><span class="op">)</span></span></code></pre></div>
+<p>The core methods need only <code>Matrix</code> and <code>RSpectra</code>. <code>text2vec</code> is required only for the <code>glove</code> method, and <code>FNN</code> only to speed up nearest-neighbour queries.</p>
+</div>
+<div class="section level2">
+<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+</h2>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/specvec" class="external-link">specvec</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># long table: one row per plot-species record, cover optional</span></span>
@@ -88,6 +112,7 @@
 <span><span class="va">emb</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/species_embedding.html">species_embedding</a></span><span class="op">(</span><span class="va">x</span>, dim <span class="op">=</span> <span class="fl">2</span>, min_occurrence <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>   <span class="co"># abund_pmi by default</span></span>
 <span><span class="fu"><a href="reference/nearest_species.html">nearest_species</a></span><span class="op">(</span><span class="va">emb</span>, <span class="st">"Acer campestre"</span><span class="op">)</span></span>
 <span><span class="va">comm</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/community_embedding.html">community_embedding</a></span><span class="op">(</span><span class="va">x</span>, embedding <span class="op">=</span> <span class="va">emb</span><span class="op">)</span>             <span class="co"># one vector per plot</span></span></code></pre></div>
+</div>
 <div class="section level2">
 <h2 id="what-the-neighbours-look-like">What the neighbours look like<a class="anchor" aria-label="anchor" href="#what-the-neighbours-look-like"></a>
 </h2>
@@ -113,7 +138,7 @@
 <h2 id="abundance-aware-and-benchmarked">Abundance-aware, and benchmarked<a class="anchor" aria-label="anchor" href="#abundance-aware-and-benchmarked"></a>
 </h2>
 <p>The default method, <code>abund_pmi</code>, is pointwise mutual information on a cover-weighted co-occurrence operator: each co-occurring plot contributes the geometric mean of the two species’ covers, so an abundant pair weighs more than a pair where one species is a trace. <code><a href="reference/compare_embeddings.html">compare_embeddings()</a></code> scores the registered methods on neutral ecological tasks under one fixed protocol (held-out co-occurrence recovery, link prediction, and habitat recovery) and reports which recovers the most held-out signal.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/compare_embeddings.html">compare_embeddings</a></span><span class="op">(</span><span class="va">x</span>, methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ca"</span>, <span class="st">"pmi"</span>, <span class="st">"abund_pmi"</span>, <span class="st">"glove"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>The win criterion is fixed before the numbers are seen: a method beats the reference only if it exceeds it on both neutral co-occurrence metrics by more than two pooled standard deviations. On continental vegetation data this selects <code>abund_pmi</code>, and its lead over correspondence analysis widens with the number of plots.</p>
 </div>
@@ -137,14 +162,6 @@
 <strong><code><a href="reference/compare_embeddings.html">compare_embeddings()</a></code></strong>: the shipped method bake-off with a fixed verdict.</li>
 </ul>
 <p>A method is a registered <code>(weighting, factorization)</code> pair, so a new method is added by registering a weighting or a factorization, not by copying a function.</p>
-</div>
-<div class="section level2">
-<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
-</h2>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/specvec"</span><span class="op">)</span></span></code></pre></div>
-<p>The core methods need only <code>Matrix</code> and <code>RSpectra</code>. <code>text2vec</code> is required only for the <code>glove</code> method, and <code>FNN</code> only to speed up nearest-neighbour queries.</p>
 </div>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
@@ -230,7 +247,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>
@@ -240,6 +257,5 @@
 
 
 
-  
-</body>
+  </body>
 </html>
