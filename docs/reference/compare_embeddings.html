@@ -19,7 +19,20 @@ definition shared across methods. Co-occurrence metrics need only x; the
 EUNIS and trait metrics activate when labels or a trait table are supplied.
 The species set is filtered once (min_occurrence) before splitting, so every
 method sees the same species. Runs on any user dataset, not just the reference
-data that tuned the package default."></head><body>
+data that tuned the package default."><script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -197,7 +210,7 @@ method "beats" the reference only if it exceeds it on both neutral metrics
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
@@ -206,6 +219,5 @@ method "beats" the reference only if it exceeds it on both neutral metrics
 
 
 
-  
-</body></html>
+  </body></html>
 

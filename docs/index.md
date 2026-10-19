@@ -3,6 +3,8 @@
 *species and communities as points in one space*
 
 [![R-CMD-check](https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/gcol33/specvec/graph/badge.svg)](https://app.codecov.io/gh/gcol33/specvec)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License:
@@ -19,6 +21,20 @@ company sit close together. Cover enters the weighting, so a dominant
 species counts for more than a trace occurrence. A plot-by-species table
 records who occurs where; `specvec` reads off which species behave alike
 and places communities and species in one comparable space.
+
+## Installation
+
+``` r
+
+install.packages("pak")
+pak::pak("gcol33/specvec")
+```
+
+The core methods need only `Matrix` and `RSpectra`. `text2vec` is
+required only for the `glove` method, and `FNN` only to speed up
+nearest-neighbour queries.
+
+## Quick start
 
 ``` r
 
@@ -132,18 +148,6 @@ correspondence analysis widens with the number of plots.
 A method is a registered `(weighting, factorization)` pair, so a new
 method is added by registering a weighting or a factorization, not by
 copying a function.
-
-## Installation
-
-``` r
-
-install.packages("pak")
-pak::pak("gcol33/specvec")
-```
-
-The core methods need only `Matrix` and `RSpectra`. `text2vec` is
-required only for the `glove` method, and `FNN` only to speed up
-nearest-neighbour queries.
 
 ## Documentation
 

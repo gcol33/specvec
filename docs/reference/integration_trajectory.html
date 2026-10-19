@@ -19,7 +19,20 @@ species_trajectory() projection), the native community is placed per window
 at the centroid of its pooled plot embeddings (community_embedding()'s
 readout), and the trajectory is the focal-to-native distance per window. A
 falling distance is integration: the neophyte's associates shift from where it
-arrived toward the resident native community."></head><body>
+arrived toward the resident native community."><script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -218,7 +231,7 @@ vignette.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
@@ -227,6 +240,5 @@ vignette.</p>
 
 
 
-  
-</body></html>
+  </body></html>
 

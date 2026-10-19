@@ -461,7 +461,8 @@ either way.</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">emb_glove</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/species_embedding.html">species_embedding</a></span><span class="op">(</span><span class="va">x</span>, method <span class="op">=</span> <span class="st">"glove"</span>, dim <span class="op">=</span> <span class="fl">2</span>, min_occurrence <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>                               glove_iter <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">emb_glove</span><span class="op">$</span><span class="va">V</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">emb_glove</span><span class="op">$</span><span class="va">V</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 3 2</span></span></code></pre></div>
 <p>Because GloVe brings its own loss, it sits apart from the eigen and
 SVD methods: those read vectors out of a fixed matrix, GloVe searches
 for vectors that fit an objective. It is the registry’s example of an

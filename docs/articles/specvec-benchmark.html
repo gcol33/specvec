@@ -679,9 +679,8 @@ comparison runs as usual.</p>
 <span>  metrics <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cooc_raw"</span>, <span class="st">"link_auc"</span><span class="op">)</span>,</span>
 <span>  dim <span class="op">=</span> <span class="fl">16</span>, seeds <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, min_occurrence <span class="op">=</span> <span class="fl">3</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt; specvec: method 'glove' needs 'text2vec' (Suggests); skipping.</span></span>
 <span><span class="va">bg</span><span class="op">$</span><span class="va">config</span><span class="op">$</span><span class="va">methods</span></span>
-<span><span class="co">#&gt; [1] "ca"        "abund_pmi"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "ca"        "abund_pmi" "glove"</span></span></code></pre></div>
 <p><code>bg$config$methods</code> lists the methods that actually ran.
 If <code>text2vec</code> is installed it includes <code>glove</code>; if
 not, <code>glove</code> is absent and you will have seen the skip note.

@@ -8,6 +8,18 @@ native-community centroid through time, in one fixed embedding frame. A
 falling distance is integration. The neophyte’s associates shift from
 where it arrived toward the native community.
 
+## Installation
+
+``` r
+
+install.packages("pak")
+pak::pak("gcol33/specvec")
+```
+
+The core methods need only `Matrix` and `RSpectra`. `text2vec` is
+required only for the `glove` method, and `FNN` only to speed up
+nearest-neighbour queries.
+
 ``` r
 
 library(specvec)

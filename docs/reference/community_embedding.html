@@ -13,7 +13,20 @@ mean of present species vectors.'><meta property="og:description" content='Place
 species it contains. The readout is uniform across methods (pooled species
 vectors), so plot embeddings stay comparable. weights = "cover" pools by
 cover (the abundance moat at plot level); weights = "presence" is the plain
-mean of present species vectors.'></head><body>
+mean of present species vectors.'><script>
+(function () {
+  var D = String.fromCharCode(36);
+  window.MathJax = {
+    tex: {
+      inlineMath: [[D, D], ["\\(", "\\)"]],
+      displayMath: [[D + D, D + D], ["\\[", "\\]"]]
+    },
+    chtml: { linebreaks: { automatic: true, width: "90% container" } },
+    svg: { linebreaks: { automatic: true, width: "90% container" } },
+    options: { renderActions: { addMenu: [] } }
+  };
+})();
+</script></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -148,7 +161,7 @@ pooling and provenance metadata.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
@@ -157,6 +170,5 @@ pooling and provenance metadata.</p>
 
 
 
-  
-</body></html>
+  </body></html>
 
