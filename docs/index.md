@@ -2,172 +2,248 @@
 
 *species and communities as points in one space*
 
-[![R-CMD-check](https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml)
-[![Codecov test
-coverage](https://codecov.io/gh/gcol33/specvec/graph/badge.svg)](https://app.codecov.io/gh/gcol33/specvec)
-[![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![License:
-MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+specvec learns vectors for plant species and for vegetation plots from a
+table of which species occur in which plots, and with how much cover.
 
-**Abundance-weighted PMI embeddings of species co-occurrence, with
-first-class community vectors and a method bake-off.**
+Each species becomes a point in a space of a few dozen dimensions,
+computed by a sparse eigendecomposition
+([Matrix](https://cran.r-project.org/package=Matrix) and
+[RSpectra](https://cran.r-project.org/package=RSpectra)) of a
+cover-weighted co-occurrence table. These species vectors are the
+embedding: species that keep the same company across plots sit close
+together. Each plot is placed in the same space as the cover-weighted
+average of its species’ vectors, so you can find a species’ ecological
+partners, compare plots with each other, and decide which plots or
+species to examine as unusual or changing.
 
-Feed it a long `plot x species (x cover)` table. `specvec` turns the
-co-occurrence into dense vectors through a sparse eigendecomposition
-(`Matrix` + `RSpectra`): every species becomes a point, every plot
-becomes a point in the same space, and species that keep the same
-company sit close together. Cover enters the weighting, so a dominant
-species counts for more than a trace occurrence. A plot-by-species table
-records who occurs where; `specvec` reads off which species behave alike
-and places communities and species in one comparable space.
+specvec supports:
+
+- **Cover-weighted co-occurrence.** In the default method, `abund_pmi`,
+  each plot two species share contributes the geometric mean of their
+  covers, so a pair that dominates a plot weighs more than a pair where
+  one species is a trace. Percent, proportion and Braun-Blanquet cover
+  scales are read directly.
+- **Community vectors.**
+  [`community_embedding()`](https://gillescolling.com/specvec/reference/community_embedding.html)
+  places plots beside the species;
+  [`community_similarity()`](https://gcol33.github.io/specvec/reference/community_similarity.md)
+  compares plots and
+  [`community_novelty()`](https://gcol33.github.io/specvec/reference/community_novelty.md)
+  scores a plot’s distance to a reference set.
+- **Change through time.** Embeddings computed per time window share one
+  fixed frame, so
+  [`species_trajectory()`](https://gcol33.github.io/specvec/reference/species_trajectory.md)
+  and
+  [`community_trajectory()`](https://gcol33.github.io/specvec/reference/community_trajectory.md)
+  follow species and plots through time, and
+  [`integration_trajectory()`](https://gcol33.github.io/specvec/reference/integration_trajectory.md)
+  tracks a neophyte’s distance to the native community.
+- **Comparing embedding methods.**
+  [`compare_embeddings()`](https://gillescolling.com/specvec/reference/compare_embeddings.html)
+  scores correspondence analysis, pointwise mutual information (PMI),
+  cover-weighted PMI and GloVe on your own data under one fixed
+  protocol.
 
 ## Installation
 
 ``` r
 
-install.packages("pak")
+# install.packages("pak")
 pak::pak("gcol33/specvec")
 ```
 
-The core methods need only `Matrix` and `RSpectra`. `text2vec` is
-required only for the `glove` method, and `FNN` only to speed up
+The core methods need only Matrix and RSpectra.
+[text2vec](https://cran.r-project.org/package=text2vec) is needed only
+for the `glove` method, and
+[FNN](https://cran.r-project.org/package=FNN) only to speed up
 nearest-neighbour queries.
 
-## Quick start
+## Usage
+
+1.  Build the data object from a long plot-species table with
+    [`specvec()`](https://gcol33.github.io/specvec/reference/specvec.md).
+2.  Learn the species vectors with
+    [`species_embedding()`](https://gcol33.github.io/specvec/reference/species_embedding.md).
+3.  Query a species’ neighbours with
+    [`nearest_species()`](https://gcol33.github.io/specvec/reference/nearest_species.md).
+4.  Place the plots in the same space with
+    [`community_embedding()`](https://gcol33.github.io/specvec/reference/community_embedding.md).
 
 ``` r
 
 library(specvec)
 
-# long table: one row per plot-species record, cover optional
-data <- data.frame(
-  plot    = c("p1","p1","p2","p2","p3","p3","p4","p4"),
-  species = c("Acer campestre","Sambucus nigra","Acer campestre","Prunus avium",
-              "Sambucus nigra","Prunus avium","Acer campestre","Sambucus nigra"),
-  cover   = c(40, 10, 55, 20, 30, 60, 25, 15)
+records <- data.frame(
+  plot    = rep(c("p1", "p2", "p3", "p4", "p5", "p6"), each = 3),
+  species = c("Acer campestre", "Sambucus nigra", "Prunus avium",
+              "Acer campestre", "Sambucus nigra", "Euonymus europaeus",
+              "Acer campestre", "Prunus avium", "Euonymus europaeus",
+              "Salix alba", "Humulus lupulus", "Sambucus nigra",
+              "Salix alba", "Humulus lupulus", "Impatiens glandulifera",
+              "Salix alba", "Impatiens glandulifera", "Humulus lupulus"),
+  cover   = c(40, 10, 20, 55, 15, 10, 30, 25, 5,
+              60, 20, 5, 50, 30, 25, 45, 35, 10)
 )
 
-x    <- specvec(data, plot = "plot", species = "species", abundance = "cover")
-emb  <- species_embedding(x, dim = 2, min_occurrence = 1)   # abund_pmi by default
+x   <- specvec(records, plot = "plot", species = "species",
+               abundance = "cover")
+emb <- species_embedding(x, dim = 2, min_occurrence = 1)
 nearest_species(emb, "Acer campestre")
-comm <- community_embedding(x, embedding = emb)             # one vector per plot
+#>                  species  similarity
+#> 1           Prunus avium  0.99997356
+#> 2     Euonymus europaeus  0.99983016
+#> 3         Sambucus nigra  0.95937182
+#> 4        Humulus lupulus  0.09946688
+#> 5             Salix alba  0.06351129
+#> 6 Impatiens glandulifera -0.05260996
 ```
 
-## What the neighbours look like
+The first three plots hold woodland-edge shrubs and trees, the last
+three a willow and riparian herbs, with Sambucus nigra in both groups.
+The neighbours of Acer campestre are the other woodland-edge species,
+with cosine similarity close to 1, followed by Sambucus nigra and then
+the riparian species near 0. The defaults, 64 dimensions and at least 5
+plots per species, are set for full surveys; this example lowers both
+because it has six plots.
 
-Fitted on a 10,000-plot sample of European vegetation, the nearest
-neighbours of three established neophytes recover the communities each
-one grows in.
+The input is a long table with one row per plot-species record. The plot
+and species columns are named in the call, and a cover column is
+optional; without it the weighting uses presence only. [Preparing data
+and cover
+scales](https://gillescolling.com/specvec/articles/specvec-data.html)
+covers the cover scales, duplicate records and time columns.
 
-Robinia pseudoacacia is a nitrogen-fixing tree of dry, nutrient-rich
-woodland edges, and its neighbours are the hedgerow and ruderal-forest
-species that follow it:
+``` r
 
-    nearest_species(emb, "Robinia pseudoacacia")
-                    species  similarity
-         Euonymus europaeus       0.770
-             Sambucus nigra       0.715
-               Prunus avium       0.710
-             Acer campestre       0.710
-              Rubus caesius       0.705
+comm <- community_embedding(x, embedding = emb)
+round(community_similarity(comm), 2)
+#>      p1   p2   p3   p4   p5   p6
+#> p1 1.00 1.00 1.00 0.18 0.09 0.07
+#> p2 1.00 1.00 1.00 0.20 0.11 0.08
+#> p3 1.00 1.00 1.00 0.14 0.05 0.02
+#> p4 0.18 0.20 0.14 1.00 1.00 0.99
+#> p5 0.09 0.11 0.05 1.00 1.00 1.00
+#> p6 0.07 0.08 0.02 0.99 1.00 1.00
+```
+
+The plot vectors fall into the same two groups: plots 1 to 3 are similar
+to each other and dissimilar to plots 4 to 6.
+
+## Neighbours of three neophytes in European vegetation
+
+Fitted on a sample of 10,000 plots of European vegetation, the nearest
+neighbours of three established neophytes are species of the communities
+each one grows in. Robinia pseudoacacia is a nitrogen-fixing tree of
+dry, nutrient-rich woodland edges, and its neighbours are hedgerow and
+ruderal-forest species:
+
+``` R
+nearest_species(emb, "Robinia pseudoacacia")
+                species  similarity
+     Euonymus europaeus       0.770
+         Sambucus nigra       0.715
+           Prunus avium       0.710
+         Acer campestre       0.710
+          Rubus caesius       0.705
+```
 
 Solidago gigantea and Impatiens glandulifera are two riverbank invaders,
-and they land in nearly the same floodplain neighbourhood of native
-willows, co-invading neophytes, and tall riparian herbs:
+and their neighbours are nearly the same floodplain species: native
+willows, other neophytes and tall riparian herbs.
 
-     Solidago gigantea                Impatiens glandulifera
-       Humulus lupulus     0.838        Carduus crispus     0.857
-       Acer negundo        0.810        Salix euxina        0.852
-       Salix alba          0.801        Salix alba          0.839
-       Echinocystis lobata 0.778        Humulus lupulus     0.823
-       Solidago canadensis 0.772        Echinocystis lobata 0.807
+``` R
+nearest_species(emb, "Solidago gigantea")
+                species  similarity
+        Humulus lupulus       0.838
+           Acer negundo       0.810
+             Salix alba       0.801
+    Echinocystis lobata       0.778
+    Solidago canadensis       0.772
 
-The dry-edge tree and the two riparian herbs occupy distinct regions of
-the space, each beside the native and co-invading species it actually
-grows with. These results come from European Vegetation Archive (EVA)
-data, an access-controlled database available on request rather than as
-an open download. `specvec` ships no vegetation data;
-[`vignette("specvec-benchmark")`](https://gcol33.github.io/specvec/articles/specvec-benchmark.md)
-reproduces the workflow on simulated plots and shows how to map an EVA
-export onto
-[`specvec()`](https://gcol33.github.io/specvec/reference/specvec.md)
-once you have access.
+nearest_species(emb, "Impatiens glandulifera")
+                species  similarity
+        Carduus crispus       0.857
+           Salix euxina       0.852
+             Salix alba       0.839
+        Humulus lupulus       0.823
+    Echinocystis lobata       0.807
+```
 
-## Abundance-aware, and benchmarked
+These results come from European Vegetation Archive (EVA) data, a
+database available on request. specvec ships no vegetation data.
+[Compare embedding methods on your own
+data](https://gillescolling.com/specvec/articles/specvec-benchmark.html)
+runs the workflow on simulated plots and shows how to map an EVA export
+onto
+[`specvec()`](https://gcol33.github.io/specvec/reference/specvec.md).
 
-The default method, `abund_pmi`, is pointwise mutual information on a
-cover-weighted co-occurrence operator: each co-occurring plot
-contributes the geometric mean of the two species’ covers, so an
-abundant pair weighs more than a pair where one species is a trace.
+## Comparing embedding methods
+
 [`compare_embeddings()`](https://gcol33.github.io/specvec/reference/compare_embeddings.md)
-scores the registered methods on neutral ecological tasks under one
-fixed protocol (held-out co-occurrence recovery, link prediction, and
-habitat recovery) and reports which recovers the most held-out signal.
+scores the registered methods on held-out co-occurrence recovery and
+link prediction, and on habitat (EUNIS) or trait recovery where plot
+habitat labels or species traits are given:
 
 ``` r
 
 compare_embeddings(x, methods = c("ca", "pmi", "abund_pmi", "glove"))
 ```
 
-The win criterion is fixed before the numbers are seen: a method beats
-the reference only if it exceeds it on both neutral co-occurrence
-metrics by more than two pooled standard deviations. On continental
-vegetation data this selects `abund_pmi`, and its lead over
-correspondence analysis widens with the number of plots.
+The criterion for a win is fixed before the scores are computed: a
+method beats the reference only if it exceeds it on both co-occurrence
+recovery and link prediction by more than two pooled standard
+deviations. On EVA samples of 10,000 and 200,000 plots this selects
+`abund_pmi`, and its lead over correspondence analysis is larger in the
+bigger sample. [Methods: from plots to
+embeddings](https://gillescolling.com/specvec/articles/specvec-methods.html)
+describes each method.
 
-## What’s in the box
-
-- **[`specvec()`](https://gcol33.github.io/specvec/reference/specvec.md)**:
-  build the data object from a long table, with percent, proportion, and
-  Braun-Blanquet cover scales.
-- **[`species_embedding()`](https://gcol33.github.io/specvec/reference/species_embedding.md)**:
-  species vectors through a registered `(weighting, factorization)`
-  method (`abund_pmi`, `pmi`, `ca`, `glove`, `clr`).
-- **[`community_embedding()`](https://gcol33.github.io/specvec/reference/community_embedding.md)**:
-  first-class plot vectors, cover- or presence-pooled, in the same space
-  as the species.
-- **[`nearest_species()`](https://gcol33.github.io/specvec/reference/nearest_species.md)
-  /
-  [`species_similarity()`](https://gcol33.github.io/specvec/reference/species_similarity.md)**:
-  neighbour and similarity queries on the species vectors.
-- **[`community_similarity()`](https://gcol33.github.io/specvec/reference/community_similarity.md)
-  /
-  [`community_novelty()`](https://gcol33.github.io/specvec/reference/community_novelty.md)**:
-  plot-to-plot similarity and distance-to-reference novelty.
-- **[`species_trajectory()`](https://gcol33.github.io/specvec/reference/species_trajectory.md)
-  /
-  [`community_trajectory()`](https://gcol33.github.io/specvec/reference/community_trajectory.md)
-  /
-  [`integration_trajectory()`](https://gcol33.github.io/specvec/reference/integration_trajectory.md)**:
-  change through time in one fixed frame, including a neophyte’s
-  distance to the native community.
-- **[`compare_embeddings()`](https://gcol33.github.io/specvec/reference/compare_embeddings.md)**:
-  the shipped method bake-off with a fixed verdict.
-
-A method is a registered `(weighting, factorization)` pair, so a new
-method is added by registering a weighting or a factorization, not by
-copying a function.
+A method is a registered pair of a weighting and a factorization, so a
+new method is added with
+[`register_weighting()`](https://gcol33.github.io/specvec/reference/register_weighting.md),
+[`register_factorization()`](https://gcol33.github.io/specvec/reference/register_factorization.md)
+or
+[`register_method()`](https://gcol33.github.io/specvec/reference/register_method.md),
+as [Extending specvec: weightings, factorizations,
+methods](https://gillescolling.com/specvec/articles/specvec-extending.html)
+shows.
 
 ## Documentation
 
-- [Getting
-  started](https://gcol33.github.io/specvec/articles/specvec-quickstart.html)
+Start with [Getting started with
+specvec](https://gillescolling.com/specvec/articles/specvec-quickstart.html):
+from a long plot table to species neighbours and plot vectors.
+
 - [Preparing data and cover
-  scales](https://gcol33.github.io/specvec/articles/specvec-data.html)
+  scales](https://gillescolling.com/specvec/articles/specvec-data.html):
+  the input table, cover scales and duplicate records.
 - [Methods: from plots to
-  embeddings](https://gcol33.github.io/specvec/articles/specvec-methods.html)
+  embeddings](https://gillescolling.com/specvec/articles/specvec-methods.html):
+  what each weighting and factorization computes.
 - [Community embeddings and
-  novelty](https://gcol33.github.io/specvec/articles/specvec-communities.html)
+  novelty](https://gillescolling.com/specvec/articles/specvec-communities.html):
+  comparing plots and scoring how unusual a plot is.
+- [Compare embedding methods on your own
+  data](https://gillescolling.com/specvec/articles/specvec-benchmark.html):
+  the benchmark protocol and its verdict.
 - [Tracking species and communities through
-  time](https://gcol33.github.io/specvec/articles/specvec-temporal.html)
+  time](https://gillescolling.com/specvec/articles/specvec-temporal.html):
+  embeddings per time window in one fixed frame.
 - [Alien integration
-  trajectories](https://gcol33.github.io/specvec/articles/specvec-integration.html)
-- [Comparing embedding
-  methods](https://gcol33.github.io/specvec/articles/specvec-benchmark.html)
-- [Extending
-  specvec](https://gcol33.github.io/specvec/articles/specvec-extending.html)
-- [Function reference](https://gcol33.github.io/specvec/reference/)
+  trajectories](https://gillescolling.com/specvec/articles/specvec-integration.html):
+  a neophyte’s distance to the native community over time.
+- [Extending specvec: weightings, factorizations,
+  methods](https://gillescolling.com/specvec/articles/specvec-extending.html):
+  registering a new method.
+- [Full reference](https://gillescolling.com/specvec/reference/): every
+  function, grouped by job.
+
+## Getting help
+
+Questions and bug reports go to the [GitHub
+issues](https://github.com/gcol33/specvec/issues). A bug report is
+easiest to act on with a small reproducible example, for instance made
+with [reprex](https://reprex.tidyverse.org/).
 
 ## Support
 
@@ -185,16 +261,28 @@ Coffee](https://img.shields.io/badge/-Buy%20me%20a%20coffee-FFDD00?logo=buymeaco
 
 ## License
 
-MIT (c) Gilles Colling. Department of Botany and Biodiversity Research,
-University of Vienna.
+specvec is licensed under MIT.
 
 ## Citation
 
+``` text
+Colling G (2026). _specvec: Abundance-Aware Species and Community
+Embeddings_. R package version 0.3.0,
+<https://github.com/gcol33/specvec>.
+```
+
+BibTeX:
+
 ``` bibtex
-@software{specvec,
-  author = {Colling, Gilles},
-  title  = {specvec: Abundance-Aware Species and Community Embeddings},
-  year   = {2026},
-  url    = {https://github.com/gcol33/specvec}
+@Manual{colling2026specvec,
+  title = {specvec: Abundance-Aware Species and Community Embeddings},
+  author = {Gilles Colling},
+  year = {2026},
+  note = {R package version 0.3.0},
+  url = {https://github.com/gcol33/specvec},
 }
 ```
+
+Download the citation as
+[BibTeX](https://gillescolling.com/specvec/specvec.bib) or
+[RIS](https://gillescolling.com/specvec/specvec.ris).

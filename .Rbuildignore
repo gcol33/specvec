@@ -11,3 +11,7 @@
 ^\.git$
 ^\.Rproj\.user$
 ^.*\.Rproj$
+^\.run.*$
+^sidecars$
+^README\.Rmd$
+^CITATION\.cff$

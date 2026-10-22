@@ -83,100 +83,143 @@
 <div class="page-header"><h1 id="specvec">specvec<a class="anchor" aria-label="anchor" href="#specvec"></a>
 </h1></div>
 <p><em>species and communities as points in one space</em></p>
-<p><a href="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://app.codecov.io/gh/gcol33/specvec" class="external-link"><img src="https://codecov.io/gh/gcol33/specvec/graph/badge.svg" alt="Codecov test coverage"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a> <a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></p>
-<p><strong>Abundance-weighted PMI embeddings of species co-occurrence, with first-class community vectors and a method bake-off.</strong></p>
-<p>Feed it a long <code>plot x species (x cover)</code> table. <code>specvec</code> turns the co-occurrence into dense vectors through a sparse eigendecomposition (<code>Matrix</code> + <code>RSpectra</code>): every species becomes a point, every plot becomes a point in the same space, and species that keep the same company sit close together. Cover enters the weighting, so a dominant species counts for more than a trace occurrence. A plot-by-species table records who occurs where; <code>specvec</code> reads off which species behave alike and places communities and species in one comparable space.</p>
+<!-- badges: start -->
+
+<p>specvec learns vectors for plant species and for vegetation plots from a table of which species occur in which plots, and with how much cover.</p>
+<p>Each species becomes a point in a space of a few dozen dimensions, computed by a sparse eigendecomposition (<a href="https://cran.r-project.org/package=Matrix" class="external-link">Matrix</a> and <a href="https://cran.r-project.org/package=RSpectra" class="external-link">RSpectra</a>) of a cover-weighted co-occurrence table. These species vectors are the embedding: species that keep the same company across plots sit close together. Each plot is placed in the same space as the cover-weighted average of its species’ vectors, so you can find a species’ ecological partners, compare plots with each other, and decide which plots or species to examine as unusual or changing.</p>
+<p>specvec supports:</p>
+<ul>
+<li>
+<strong>Cover-weighted co-occurrence.</strong> In the default method, <code>abund_pmi</code>, each plot two species share contributes the geometric mean of their covers, so a pair that dominates a plot weighs more than a pair where one species is a trace. Percent, proportion and Braun-Blanquet cover scales are read directly.</li>
+<li>
+<strong>Community vectors.</strong> <a href="https://gillescolling.com/specvec/reference/community_embedding.html" class="external-link"><code>community_embedding()</code></a> places plots beside the species; <code><a href="reference/community_similarity.html">community_similarity()</a></code> compares plots and <code><a href="reference/community_novelty.html">community_novelty()</a></code> scores a plot’s distance to a reference set.</li>
+<li>
+<strong>Change through time.</strong> Embeddings computed per time window share one fixed frame, so <code><a href="reference/species_trajectory.html">species_trajectory()</a></code> and <code><a href="reference/community_trajectory.html">community_trajectory()</a></code> follow species and plots through time, and <code><a href="reference/integration_trajectory.html">integration_trajectory()</a></code> tracks a neophyte’s distance to the native community.</li>
+<li>
+<strong>Comparing embedding methods.</strong> <a href="https://gillescolling.com/specvec/reference/compare_embeddings.html" class="external-link"><code>compare_embeddings()</code></a> scores correspondence analysis, pointwise mutual information (PMI), cover-weighted PMI and GloVe on your own data under one fixed protocol.</li>
+</ul>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"gcol33/specvec"</span><span class="op">)</span></span></code></pre></div>
-<p>The core methods need only <code>Matrix</code> and <code>RSpectra</code>. <code>text2vec</code> is required only for the <code>glove</code> method, and <code>FNN</code> only to speed up nearest-neighbour queries.</p>
+<p>The core methods need only Matrix and RSpectra. <a href="https://cran.r-project.org/package=text2vec" class="external-link">text2vec</a> is needed only for the <code>glove</code> method, and <a href="https://cran.r-project.org/package=FNN" class="external-link">FNN</a> only to speed up nearest-neighbour queries.</p>
 </div>
 <div class="section level2">
-<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+<h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h2>
+<ol style="list-style-type: decimal">
+<li>Build the data object from a long plot-species table with <code><a href="reference/specvec.html">specvec()</a></code>.</li>
+<li>Learn the species vectors with <code><a href="reference/species_embedding.html">species_embedding()</a></code>.</li>
+<li>Query a species’ neighbours with <code><a href="reference/nearest_species.html">nearest_species()</a></code>.</li>
+<li>Place the plots in the same space with <code><a href="reference/community_embedding.html">community_embedding()</a></code>.</li>
+</ol>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/gcol33/specvec" class="external-link">specvec</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># long table: one row per plot-species record, cover optional</span></span>
-<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>  plot    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"p1"</span>,<span class="st">"p1"</span>,<span class="st">"p2"</span>,<span class="st">"p2"</span>,<span class="st">"p3"</span>,<span class="st">"p3"</span>,<span class="st">"p4"</span>,<span class="st">"p4"</span><span class="op">)</span>,</span>
-<span>  species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Acer campestre"</span>,<span class="st">"Sambucus nigra"</span>,<span class="st">"Acer campestre"</span>,<span class="st">"Prunus avium"</span>,</span>
-<span>              <span class="st">"Sambucus nigra"</span>,<span class="st">"Prunus avium"</span>,<span class="st">"Acer campestre"</span>,<span class="st">"Sambucus nigra"</span><span class="op">)</span>,</span>
-<span>  cover   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">40</span>, <span class="fl">10</span>, <span class="fl">55</span>, <span class="fl">20</span>, <span class="fl">30</span>, <span class="fl">60</span>, <span class="fl">25</span>, <span class="fl">15</span><span class="op">)</span></span>
+<span><span class="va">records</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  plot    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"p1"</span>, <span class="st">"p2"</span>, <span class="st">"p3"</span>, <span class="st">"p4"</span>, <span class="st">"p5"</span>, <span class="st">"p6"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  species <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Acer campestre"</span>, <span class="st">"Sambucus nigra"</span>, <span class="st">"Prunus avium"</span>,</span>
+<span>              <span class="st">"Acer campestre"</span>, <span class="st">"Sambucus nigra"</span>, <span class="st">"Euonymus europaeus"</span>,</span>
+<span>              <span class="st">"Acer campestre"</span>, <span class="st">"Prunus avium"</span>, <span class="st">"Euonymus europaeus"</span>,</span>
+<span>              <span class="st">"Salix alba"</span>, <span class="st">"Humulus lupulus"</span>, <span class="st">"Sambucus nigra"</span>,</span>
+<span>              <span class="st">"Salix alba"</span>, <span class="st">"Humulus lupulus"</span>, <span class="st">"Impatiens glandulifera"</span>,</span>
+<span>              <span class="st">"Salix alba"</span>, <span class="st">"Impatiens glandulifera"</span>, <span class="st">"Humulus lupulus"</span><span class="op">)</span>,</span>
+<span>  cover   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">40</span>, <span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">55</span>, <span class="fl">15</span>, <span class="fl">10</span>, <span class="fl">30</span>, <span class="fl">25</span>, <span class="fl">5</span>,</span>
+<span>              <span class="fl">60</span>, <span class="fl">20</span>, <span class="fl">5</span>, <span class="fl">50</span>, <span class="fl">30</span>, <span class="fl">25</span>, <span class="fl">45</span>, <span class="fl">35</span>, <span class="fl">10</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">x</span>    <span class="op">&lt;-</span> <span class="fu"><a href="reference/specvec.html">specvec</a></span><span class="op">(</span><span class="va">data</span>, plot <span class="op">=</span> <span class="st">"plot"</span>, species <span class="op">=</span> <span class="st">"species"</span>, abundance <span class="op">=</span> <span class="st">"cover"</span><span class="op">)</span></span>
-<span><span class="va">emb</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/species_embedding.html">species_embedding</a></span><span class="op">(</span><span class="va">x</span>, dim <span class="op">=</span> <span class="fl">2</span>, min_occurrence <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>   <span class="co"># abund_pmi by default</span></span>
+<span><span class="va">x</span>   <span class="op">&lt;-</span> <span class="fu"><a href="reference/specvec.html">specvec</a></span><span class="op">(</span><span class="va">records</span>, plot <span class="op">=</span> <span class="st">"plot"</span>, species <span class="op">=</span> <span class="st">"species"</span>,</span>
+<span>               abundance <span class="op">=</span> <span class="st">"cover"</span><span class="op">)</span></span>
+<span><span class="va">emb</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/species_embedding.html">species_embedding</a></span><span class="op">(</span><span class="va">x</span>, dim <span class="op">=</span> <span class="fl">2</span>, min_occurrence <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/nearest_species.html">nearest_species</a></span><span class="op">(</span><span class="va">emb</span>, <span class="st">"Acer campestre"</span><span class="op">)</span></span>
-<span><span class="va">comm</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/community_embedding.html">community_embedding</a></span><span class="op">(</span><span class="va">x</span>, embedding <span class="op">=</span> <span class="va">emb</span><span class="op">)</span>             <span class="co"># one vector per plot</span></span></code></pre></div>
+<span><span class="co">#&gt;                  species  similarity</span></span>
+<span><span class="co">#&gt; 1           Prunus avium  0.99997356</span></span>
+<span><span class="co">#&gt; 2     Euonymus europaeus  0.99983016</span></span>
+<span><span class="co">#&gt; 3         Sambucus nigra  0.95937182</span></span>
+<span><span class="co">#&gt; 4        Humulus lupulus  0.09946688</span></span>
+<span><span class="co">#&gt; 5             Salix alba  0.06351129</span></span>
+<span><span class="co">#&gt; 6 Impatiens glandulifera -0.05260996</span></span></code></pre></div>
+<p>The first three plots hold woodland-edge shrubs and trees, the last three a willow and riparian herbs, with Sambucus nigra in both groups. The neighbours of Acer campestre are the other woodland-edge species, with cosine similarity close to 1, followed by Sambucus nigra and then the riparian species near 0. The defaults, 64 dimensions and at least 5 plots per species, are set for full surveys; this example lowers both because it has six plots.</p>
+<p>The input is a long table with one row per plot-species record. The plot and species columns are named in the call, and a cover column is optional; without it the weighting uses presence only. <a href="https://gillescolling.com/specvec/articles/specvec-data.html" class="external-link">Preparing data and cover scales</a> covers the cover scales, duplicate records and time columns.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">comm</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/community_embedding.html">community_embedding</a></span><span class="op">(</span><span class="va">x</span>, embedding <span class="op">=</span> <span class="va">emb</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="reference/community_similarity.html">community_similarity</a></span><span class="op">(</span><span class="va">comm</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt;      p1   p2   p3   p4   p5   p6</span></span>
+<span><span class="co">#&gt; p1 1.00 1.00 1.00 0.18 0.09 0.07</span></span>
+<span><span class="co">#&gt; p2 1.00 1.00 1.00 0.20 0.11 0.08</span></span>
+<span><span class="co">#&gt; p3 1.00 1.00 1.00 0.14 0.05 0.02</span></span>
+<span><span class="co">#&gt; p4 0.18 0.20 0.14 1.00 1.00 0.99</span></span>
+<span><span class="co">#&gt; p5 0.09 0.11 0.05 1.00 1.00 1.00</span></span>
+<span><span class="co">#&gt; p6 0.07 0.08 0.02 0.99 1.00 1.00</span></span></code></pre></div>
+<p>The plot vectors fall into the same two groups: plots 1 to 3 are similar to each other and dissimilar to plots 4 to 6.</p>
 </div>
 <div class="section level2">
-<h2 id="what-the-neighbours-look-like">What the neighbours look like<a class="anchor" aria-label="anchor" href="#what-the-neighbours-look-like"></a>
+<h2 id="neighbours-of-three-neophytes-in-european-vegetation">Neighbours of three neophytes in European vegetation<a class="anchor" aria-label="anchor" href="#neighbours-of-three-neophytes-in-european-vegetation"></a>
 </h2>
-<p>Fitted on a 10,000-plot sample of European vegetation, the nearest neighbours of three established neophytes recover the communities each one grows in.</p>
-<p>Robinia pseudoacacia is a nitrogen-fixing tree of dry, nutrient-rich woodland edges, and its neighbours are the hedgerow and ruderal-forest species that follow it:</p>
-<pre><code>nearest_species(emb, "Robinia pseudoacacia")
-                species  similarity
-     Euonymus europaeus       0.770
-         Sambucus nigra       0.715
-           Prunus avium       0.710
-         Acer campestre       0.710
-          Rubus caesius       0.705</code></pre>
-<p>Solidago gigantea and Impatiens glandulifera are two riverbank invaders, and they land in nearly the same floodplain neighbourhood of native willows, co-invading neophytes, and tall riparian herbs:</p>
-<pre><code> Solidago gigantea                Impatiens glandulifera
-   Humulus lupulus     0.838        Carduus crispus     0.857
-   Acer negundo        0.810        Salix euxina        0.852
-   Salix alba          0.801        Salix alba          0.839
-   Echinocystis lobata 0.778        Humulus lupulus     0.823
-   Solidago canadensis 0.772        Echinocystis lobata 0.807</code></pre>
-<p>The dry-edge tree and the two riparian herbs occupy distinct regions of the space, each beside the native and co-invading species it actually grows with. These results come from European Vegetation Archive (EVA) data, an access-controlled database available on request rather than as an open download. <code>specvec</code> ships no vegetation data; <code><a href="articles/specvec-benchmark.html">vignette("specvec-benchmark")</a></code> reproduces the workflow on simulated plots and shows how to map an EVA export onto <code><a href="reference/specvec.html">specvec()</a></code> once you have access.</p>
+<p>Fitted on a sample of 10,000 plots of European vegetation, the nearest neighbours of three established neophytes are species of the communities each one grows in. Robinia pseudoacacia is a nitrogen-fixing tree of dry, nutrient-rich woodland edges, and its neighbours are hedgerow and ruderal-forest species:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">nearest_species</span>(emb, <span class="st">"Robinia pseudoacacia"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>                species  similarity</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>     Euonymus europaeus       <span class="fl">0.770</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>         Sambucus nigra       <span class="fl">0.715</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>           Prunus avium       <span class="fl">0.710</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>         Acer campestre       <span class="fl">0.710</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>          Rubus caesius       <span class="fl">0.705</span></span></code></pre></div>
+<p>Solidago gigantea and Impatiens glandulifera are two riverbank invaders, and their neighbours are nearly the same floodplain species: native willows, other neophytes and tall riparian herbs.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">nearest_species</span>(emb, <span class="st">"Solidago gigantea"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>                species  similarity</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>        Humulus lupulus       <span class="fl">0.838</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>           Acer negundo       <span class="fl">0.810</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>             Salix alba       <span class="fl">0.801</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>    Echinocystis lobata       <span class="fl">0.778</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>    Solidago canadensis       <span class="fl">0.772</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="fu">nearest_species</span>(emb, <span class="st">"Impatiens glandulifera"</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>                species  similarity</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>        Carduus crispus       <span class="fl">0.857</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>           Salix euxina       <span class="fl">0.852</span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>             Salix alba       <span class="fl">0.839</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>        Humulus lupulus       <span class="fl">0.823</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>    Echinocystis lobata       <span class="fl">0.807</span></span></code></pre></div>
+<p>These results come from European Vegetation Archive (EVA) data, a database available on request. specvec ships no vegetation data. <a href="https://gillescolling.com/specvec/articles/specvec-benchmark.html" class="external-link">Compare embedding methods on your own data</a> runs the workflow on simulated plots and shows how to map an EVA export onto <code><a href="reference/specvec.html">specvec()</a></code>.</p>
 </div>
 <div class="section level2">
-<h2 id="abundance-aware-and-benchmarked">Abundance-aware, and benchmarked<a class="anchor" aria-label="anchor" href="#abundance-aware-and-benchmarked"></a>
+<h2 id="comparing-embedding-methods">Comparing embedding methods<a class="anchor" aria-label="anchor" href="#comparing-embedding-methods"></a>
 </h2>
-<p>The default method, <code>abund_pmi</code>, is pointwise mutual information on a cover-weighted co-occurrence operator: each co-occurring plot contributes the geometric mean of the two species’ covers, so an abundant pair weighs more than a pair where one species is a trace. <code><a href="reference/compare_embeddings.html">compare_embeddings()</a></code> scores the registered methods on neutral ecological tasks under one fixed protocol (held-out co-occurrence recovery, link prediction, and habitat recovery) and reports which recovers the most held-out signal.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<p><code><a href="reference/compare_embeddings.html">compare_embeddings()</a></code> scores the registered methods on held-out co-occurrence recovery and link prediction, and on habitat (EUNIS) or trait recovery where plot habitat labels or species traits are given:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="reference/compare_embeddings.html">compare_embeddings</a></span><span class="op">(</span><span class="va">x</span>, methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ca"</span>, <span class="st">"pmi"</span>, <span class="st">"abund_pmi"</span>, <span class="st">"glove"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>The win criterion is fixed before the numbers are seen: a method beats the reference only if it exceeds it on both neutral co-occurrence metrics by more than two pooled standard deviations. On continental vegetation data this selects <code>abund_pmi</code>, and its lead over correspondence analysis widens with the number of plots.</p>
-</div>
-<div class="section level2">
-<h2 id="whats-in-the-box">What’s in the box<a class="anchor" aria-label="anchor" href="#whats-in-the-box"></a>
-</h2>
-<ul>
-<li>
-<strong><code><a href="reference/specvec.html">specvec()</a></code></strong>: build the data object from a long table, with percent, proportion, and Braun-Blanquet cover scales.</li>
-<li>
-<strong><code><a href="reference/species_embedding.html">species_embedding()</a></code></strong>: species vectors through a registered <code>(weighting, factorization)</code> method (<code>abund_pmi</code>, <code>pmi</code>, <code>ca</code>, <code>glove</code>, <code>clr</code>).</li>
-<li>
-<strong><code><a href="reference/community_embedding.html">community_embedding()</a></code></strong>: first-class plot vectors, cover- or presence-pooled, in the same space as the species.</li>
-<li>
-<strong><code><a href="reference/nearest_species.html">nearest_species()</a></code> / <code><a href="reference/species_similarity.html">species_similarity()</a></code></strong>: neighbour and similarity queries on the species vectors.</li>
-<li>
-<strong><code><a href="reference/community_similarity.html">community_similarity()</a></code> / <code><a href="reference/community_novelty.html">community_novelty()</a></code></strong>: plot-to-plot similarity and distance-to-reference novelty.</li>
-<li>
-<strong><code><a href="reference/species_trajectory.html">species_trajectory()</a></code> / <code><a href="reference/community_trajectory.html">community_trajectory()</a></code> / <code><a href="reference/integration_trajectory.html">integration_trajectory()</a></code></strong>: change through time in one fixed frame, including a neophyte’s distance to the native community.</li>
-<li>
-<strong><code><a href="reference/compare_embeddings.html">compare_embeddings()</a></code></strong>: the shipped method bake-off with a fixed verdict.</li>
-</ul>
-<p>A method is a registered <code>(weighting, factorization)</code> pair, so a new method is added by registering a weighting or a factorization, not by copying a function.</p>
+<p>The criterion for a win is fixed before the scores are computed: a method beats the reference only if it exceeds it on both co-occurrence recovery and link prediction by more than two pooled standard deviations. On EVA samples of 10,000 and 200,000 plots this selects <code>abund_pmi</code>, and its lead over correspondence analysis is larger in the bigger sample. <a href="https://gillescolling.com/specvec/articles/specvec-methods.html" class="external-link">Methods: from plots to embeddings</a> describes each method.</p>
+<p>A method is a registered pair of a weighting and a factorization, so a new method is added with <code><a href="reference/register_weighting.html">register_weighting()</a></code>, <code><a href="reference/register_factorization.html">register_factorization()</a></code> or <code><a href="reference/register_method.html">register_method()</a></code>, as <a href="https://gillescolling.com/specvec/articles/specvec-extending.html" class="external-link">Extending specvec: weightings, factorizations, methods</a> shows.</p>
 </div>
 <div class="section level2">
 <h2 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a>
 </h2>
+<p>Start with <a href="https://gillescolling.com/specvec/articles/specvec-quickstart.html" class="external-link">Getting started with specvec</a>: from a long plot table to species neighbours and plot vectors.</p>
 <ul>
-<li><a href="https://gcol33.github.io/specvec/articles/specvec-quickstart.html">Getting started</a></li>
-<li><a href="https://gcol33.github.io/specvec/articles/specvec-data.html">Preparing data and cover scales</a></li>
-<li><a href="https://gcol33.github.io/specvec/articles/specvec-methods.html">Methods: from plots to embeddings</a></li>
-<li><a href="https://gcol33.github.io/specvec/articles/specvec-communities.html">Community embeddings and novelty</a></li>
-<li><a href="https://gcol33.github.io/specvec/articles/specvec-temporal.html">Tracking species and communities through time</a></li>
-<li><a href="https://gcol33.github.io/specvec/articles/specvec-integration.html">Alien integration trajectories</a></li>
-<li><a href="https://gcol33.github.io/specvec/articles/specvec-benchmark.html">Comparing embedding methods</a></li>
-<li><a href="https://gcol33.github.io/specvec/articles/specvec-extending.html">Extending specvec</a></li>
-<li><a href="https://gcol33.github.io/specvec/reference/">Function reference</a></li>
+<li>
+<a href="https://gillescolling.com/specvec/articles/specvec-data.html" class="external-link">Preparing data and cover scales</a>: the input table, cover scales and duplicate records.</li>
+<li>
+<a href="https://gillescolling.com/specvec/articles/specvec-methods.html" class="external-link">Methods: from plots to embeddings</a>: what each weighting and factorization computes.</li>
+<li>
+<a href="https://gillescolling.com/specvec/articles/specvec-communities.html" class="external-link">Community embeddings and novelty</a>: comparing plots and scoring how unusual a plot is.</li>
+<li>
+<a href="https://gillescolling.com/specvec/articles/specvec-benchmark.html" class="external-link">Compare embedding methods on your own data</a>: the benchmark protocol and its verdict.</li>
+<li>
+<a href="https://gillescolling.com/specvec/articles/specvec-temporal.html" class="external-link">Tracking species and communities through time</a>: embeddings per time window in one fixed frame.</li>
+<li>
+<a href="https://gillescolling.com/specvec/articles/specvec-integration.html" class="external-link">Alien integration trajectories</a>: a neophyte’s distance to the native community over time.</li>
+<li>
+<a href="https://gillescolling.com/specvec/articles/specvec-extending.html" class="external-link">Extending specvec: weightings, factorizations, methods</a>: registering a new method.</li>
+<li>
+<a href="https://gillescolling.com/specvec/reference/" class="external-link">Full reference</a>: every function, grouped by job.</li>
 </ul>
+</div>
+<div class="section level2">
+<h2 id="getting-help">Getting help<a class="anchor" aria-label="anchor" href="#getting-help"></a>
+</h2>
+<p>Questions and bug reports go to the <a href="https://github.com/gcol33/specvec/issues" class="external-link">GitHub issues</a>. A bug report is easiest to act on with a small reproducible example, for instance made with <a href="https://reprex.tidyverse.org/" class="external-link">reprex</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="support">Support<a class="anchor" aria-label="anchor" href="#support"></a>
@@ -191,17 +234,23 @@
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
-<p>MIT (c) Gilles Colling. Department of Botany and Biodiversity Research, University of Vienna.</p>
+<p>specvec is licensed under MIT.</p>
 </div>
 <div class="section level2">
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
-<div class="sourceCode" id="cb6"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co">@software{specvec,</span></span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">  author = {Colling, Gilles},</span></span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">  title  = {specvec: Abundance-Aware Species and Community Embeddings},</span></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">  year   = {2026},</span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">  url    = {https://github.com/gcol33/specvec}</span></span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">}</span></span></code></pre></div>
+<pre class="text"><code>Colling G (2026). _specvec: Abundance-Aware Species and Community
+Embeddings_. R package version 0.3.0,
+&lt;https://github.com/gcol33/specvec&gt;.</code></pre>
+<p>BibTeX:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="va">@Manual</span>{<span class="ot">colling2026specvec</span>,</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="dt">title</span> = {specvec: Abundance-Aware Species and Community Embeddings},</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="dt">author</span> = {Gilles Colling},</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="dt">year</span> = {2026},</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="dt">note</span> = {R package version 0.3.0},</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="dt">url</span> = {https://github.com/gcol33/specvec},</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>}</span></code></pre></div>
+<p>Download the citation as <a href="https://gillescolling.com/specvec/specvec.bib" class="external-link">BibTeX</a> or <a href="https://gillescolling.com/specvec/specvec.ris" class="external-link">RIS</a>.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -236,7 +285,14 @@
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/gcol33/specvec/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://app.codecov.io/gh/gcol33/specvec" class="external-link"><img src="https://codecov.io/gh/gcol33/specvec/graph/badge.svg" alt="Codecov test coverage"></a></li>
+<li><a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a></li>
+</ul>
+</div>
 
   </aside>
 </div>

@@ -24,3 +24,5 @@ figure/
 
 # Claude
 .claude/
+
+.run*

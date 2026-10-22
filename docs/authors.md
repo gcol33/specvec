@@ -8,13 +8,13 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/gcol33/specvec/blob/HEAD/DESCRIPTION)
+[`inst/CITATION`](https://github.com/gcol33/specvec/blob/HEAD/inst/CITATION)
 
 Colling G (2026). *specvec: Abundance-Aware Species and Community
 Embeddings*. R package version 0.3.0,
 <https://github.com/gcol33/specvec>.
 
-    @Manual{,
+    @Manual{colling2026specvec,
       title = {specvec: Abundance-Aware Species and Community Embeddings},
       author = {Gilles Colling},
       year = {2026},
