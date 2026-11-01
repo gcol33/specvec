@@ -40,11 +40,11 @@ navbar:
     - news
     right:
     - search
-    - lightswitch
     - github
+    - lightswitch
   components:
     intro:
-      text: Get Started
+      text: Get started
       href: articles/specvec-quickstart.html
     github:
       icon: fab fa-github
@@ -95,16 +95,22 @@ articles:
 - title: Get started
   contents:
   - specvec-quickstart
+- title: Data
+  navbar: Data
+  contents:
   - specvec-data
 - title: Embeddings
+  navbar: Embeddings
   contents:
   - specvec-methods
   - specvec-communities
   - specvec-benchmark
 - title: Through time
+  navbar: Through time
   contents:
   - specvec-temporal
   - specvec-integration
 - title: Extend
+  navbar: Extend
   contents:
   - specvec-extending

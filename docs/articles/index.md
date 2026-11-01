@@ -4,6 +4,9 @@
 
 - [Getting started with
   specvec](https://gcol33.github.io/specvec/articles/specvec-quickstart.md):
+
+### Data
+
 - [Preparing data and cover
   scales](https://gcol33.github.io/specvec/articles/specvec-data.md):
 
