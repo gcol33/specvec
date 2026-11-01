@@ -270,11 +270,10 @@ species present in both halves of the series.</p>
 <span><span class="co">#&gt; [1] 16</span></span></code></pre></div>
 <p>The naive displacement is the row-wise Euclidean distance between the
 early and late coordinate matrices, restricted to those shared species.
-If the two fits spoke the same language, a species that did not move
-would sit at distance zero and one that moved a little would sit at a
-small distance. They do not speak the same language, so the distances
-are large and roughly uniform across species that the simulation never
-perturbed.</p>
+If the two fits shared one coordinate system, a species that did not
+move would sit at distance zero and one that moved a little would sit at
+a small distance. They do not share one, so the distances are large and
+roughly uniform across species that the simulation never perturbed.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">naive</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="op">(</span><span class="va">Ve</span><span class="op">[</span><span class="va">shared</span>, <span class="op">]</span> <span class="op">-</span> <span class="va">Vl</span><span class="op">[</span><span class="va">shared</span>, <span class="op">]</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">naive</span><span class="op">)</span></span>
@@ -282,11 +281,11 @@ perturbed.</p>
 <span><span class="co">#&gt;   1.298   1.363   1.634   1.637   1.921   1.958</span></span></code></pre></div>
 <p>These numbers are not a measurement of movement. They are the gap
 between two arbitrary bases, the same gap that a Procrustes step would
-try to rotate away. The honest test is to grant the comparison its best
-chance and fit the optimal orthogonal rotation that maps the late fit
-onto the early fit, then measure what displacement survives. The
-rotation is the closed-form orthogonal Procrustes solution from the
-singular value decomposition of the cross-product.</p>
+try to rotate away. The next step grants the comparison its best chance:
+fit the optimal orthogonal rotation that maps the late fit onto the
+early fit, then measure what displacement survives. The rotation is the
+closed-form orthogonal Procrustes solution from the singular value
+decomposition of the cross-product.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">E</span> <span class="op">&lt;-</span> <span class="va">Ve</span><span class="op">[</span><span class="va">shared</span>, <span class="op">]</span>; <span class="va">L</span> <span class="op">&lt;-</span> <span class="va">Vl</span><span class="op">[</span><span class="va">shared</span>, <span class="op">]</span></span>
 <span><span class="va">sv</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/svd.html" class="external-link">svd</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/crossprod.html" class="external-link">crossprod</a></span><span class="op">(</span><span class="va">L</span>, <span class="va">E</span><span class="op">)</span><span class="op">)</span></span>

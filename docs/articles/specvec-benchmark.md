@@ -450,8 +450,8 @@ On this dataset `abund_pmi` clears the bar on `cooc_raw` but not on
 intended: a method that wins one neutral task and loses the other has
 not shown the across-the-board advantage the rule asks for. On a few
 hundred plots a clean two-sigma gap on both metrics at once is uncommon,
-and `partial` or `no advantage` is the usual verdict. That is the honest
-reading of a small dataset: the ordering exists but the evidence is not
+and `partial` or `no advantage` is the usual verdict. That is what a
+small dataset supports: the ordering exists but the evidence is not
 strong enough to call a winner. The published continental result is
 where the criterion bites. On vegetation data at 10,000 and 200,000
 plots, `abund_pmi` wins both neutral metrics over correspondence

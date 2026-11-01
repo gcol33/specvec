@@ -180,11 +180,10 @@ length(shared)
 
 The naive displacement is the row-wise Euclidean distance between the
 early and late coordinate matrices, restricted to those shared species.
-If the two fits spoke the same language, a species that did not move
-would sit at distance zero and one that moved a little would sit at a
-small distance. They do not speak the same language, so the distances
-are large and roughly uniform across species that the simulation never
-perturbed.
+If the two fits shared one coordinate system, a species that did not
+move would sit at distance zero and one that moved a little would sit at
+a small distance. They do not share one, so the distances are large and
+roughly uniform across species that the simulation never perturbed.
 
 ``` r
 
@@ -196,11 +195,11 @@ summary(naive)
 
 These numbers are not a measurement of movement. They are the gap
 between two arbitrary bases, the same gap that a Procrustes step would
-try to rotate away. The honest test is to grant the comparison its best
-chance and fit the optimal orthogonal rotation that maps the late fit
-onto the early fit, then measure what displacement survives. The
-rotation is the closed-form orthogonal Procrustes solution from the
-singular value decomposition of the cross-product.
+try to rotate away. The next step grants the comparison its best chance:
+fit the optimal orthogonal rotation that maps the late fit onto the
+early fit, then measure what displacement survives. The rotation is the
+closed-form orthogonal Procrustes solution from the singular value
+decomposition of the cross-product.
 
 ``` r
 
