@@ -14,8 +14,8 @@ Vegetation ecologists with plot data (EVA-style long tables, percent or Braun-Bl
 ### A1 Species neighbours from co-occurrence
 - question: which species does my data treat as ecological partners?
 - answer: `species_embedding()` with the cover-weighted PMI default, then `nearest_species()`
-- evidence: vignettes/specvec-quickstart.Rmd; dev_notes/demo_neophytes.R (EVA neighbour lists)
-- home: vignettes/specvec-quickstart.Rmd (Getting started with specvec)
+- evidence: vignettes/specvec.Rmd; dev_notes/demo_neophytes.R (EVA neighbour lists)
+- home: vignettes/specvec.Rmd (Getting started with specvec)
 - also: README Usage, README neighbours section
 
 ### A2 Communities in the same space

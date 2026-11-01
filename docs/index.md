@@ -211,8 +211,8 @@ shows.
 ## Documentation
 
 Start with [Getting started with
-specvec](https://gcol33.github.io/specvec/articles/specvec-quickstart.html):
-from a long plot table to species neighbours and plot vectors.
+specvec](https://gcol33.github.io/specvec/articles/specvec.html): from a
+long plot table to species neighbours and plot vectors.
 
 - [Preparing data and cover
   scales](https://gcol33.github.io/specvec/articles/specvec-data.html):

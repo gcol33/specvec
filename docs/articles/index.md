@@ -1,10 +1,5 @@
 # Articles
 
-### Get started
-
-- [Getting started with
-  specvec](https://gcol33.github.io/specvec/articles/specvec-quickstart.md):
-
 ### Data
 
 - [Preparing data and cover

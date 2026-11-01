@@ -39,7 +39,7 @@ community-level signal that no single trait carries.
 specvec turns “the company a species keeps” into a coordinate. Two
 species that repeatedly share cover-heavy plots land near each other,
 two that never meet land far apart (the geometry is laid out in
-[`vignette("specvec-quickstart")`](https://gcol33.github.io/specvec/articles/specvec-quickstart.md)).
+[`vignette("specvec")`](https://gcol33.github.io/specvec/articles/specvec.md)).
 A neophyte that moves from ruderal company to native company therefore
 moves through that coordinate space, and the distance from where it sits
 to the centre of the native community is a number we can follow decade

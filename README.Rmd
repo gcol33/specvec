@@ -128,7 +128,7 @@ A method is a registered pair of a weighting and a factorization, so a new metho
 
 ## Documentation
 
-Start with [Getting started with specvec](https://gcol33.github.io/specvec/articles/specvec-quickstart.html): from a long plot table to species neighbours and plot vectors.
+Start with [Getting started with specvec](https://gcol33.github.io/specvec/articles/specvec.html): from a long plot table to species neighbours and plot vectors.
 
 - [Preparing data and cover scales](https://gcol33.github.io/specvec/articles/specvec-data.html): the input table, cover scales and duplicate records.
 - [Methods: from plots to embeddings](https://gcol33.github.io/specvec/articles/specvec-methods.html): what each weighting and factorization computes.

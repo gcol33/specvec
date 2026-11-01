@@ -8,9 +8,9 @@ articles:
   specvec-extending: specvec-extending.html
   specvec-integration: specvec-integration.html
   specvec-methods: specvec-methods.html
-  specvec-quickstart: specvec-quickstart.html
   specvec-temporal: specvec-temporal.html
-last_built: 2026-11-01T17:04Z
+  specvec: specvec.html
+last_built: 2026-11-01T23:27Z
 urls:
   reference: https://gcol33.github.io/specvec/reference
   article: https://gcol33.github.io/specvec/articles

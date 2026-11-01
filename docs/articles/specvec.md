@@ -378,7 +378,7 @@ text(V[show, 1], V[show, 2], labels = show, pos = 3, cex = 0.7)
 
 ![Two-dimensional scatter of the first two species-embedding columns for
 a handful of species, each point labelled with its species
-id.](specvec-quickstart_files/figure-html/plot-species-1.svg)
+id.](specvec_files/figure-html/plot-species-1.svg)
 
 Points that cluster on this map are species the embedding judges to
 share habitat, which traces back to the latent niches that generated the
@@ -804,7 +804,7 @@ hist(nov5, breaks = 12, col = "#88aacc", border = "white",
 ```
 
 ![Histogram of per-plot novelty scores against a reference
-block.](specvec-quickstart_files/figure-html/taste-novelty-1.svg)
+block.](specvec_files/figure-html/taste-novelty-1.svg)
 
 ``` r
 
@@ -853,7 +853,7 @@ plot(d$center, d$d1, type = "b", pch = 19, xlab = "decade", ylab = "frame dim 1"
 ```
 
 ![First frame coordinate of a focal species across three
-decades.](specvec-quickstart_files/figure-html/taste-time-1.svg)
+decades.](specvec_files/figure-html/taste-time-1.svg)
 
 The first frame coordinate of the focal species shifts across the three
 decades, tracing its move from the company of group A toward group B.
