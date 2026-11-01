@@ -34,7 +34,7 @@ specvec supports:
   one species is a trace. Percent, proportion and Braun-Blanquet cover
   scales are read directly.
 - **Community vectors.**
-  [`community_embedding()`](https://gillescolling.com/specvec/reference/community_embedding.html)
+  [`community_embedding()`](https://gcol33.github.io/specvec/reference/community_embedding.html)
   places plots beside the species; `community_similarity()` compares
   plots and `community_novelty()` scores a plot’s distance to a
   reference set.
@@ -43,7 +43,7 @@ specvec supports:
   follow species and plots through time, and `integration_trajectory()`
   tracks a neophyte’s distance to the native community.
 - **Comparing embedding methods.**
-  [`compare_embeddings()`](https://gillescolling.com/specvec/reference/compare_embeddings.html)
+  [`compare_embeddings()`](https://gcol33.github.io/specvec/reference/compare_embeddings.html)
   scores correspondence analysis, pointwise mutual information (PMI),
   cover-weighted PMI and GloVe on your own data under one fixed
   protocol.
@@ -109,7 +109,7 @@ The input is a long table with one row per plot-species record. The plot
 and species columns are named in the call, and a cover column is
 optional; without it the weighting uses presence only. [Preparing data
 and cover
-scales](https://gillescolling.com/specvec/articles/specvec-data.html)
+scales](https://gcol33.github.io/specvec/articles/specvec-data.html)
 covers the cover scales, duplicate records and time columns.
 
 ``` r
@@ -166,7 +166,7 @@ willows, other neophytes and tall riparian herbs.
 These results come from European Vegetation Archive (EVA) data, a
 database available on request. specvec ships no vegetation data.
 [Compare embedding methods on your own
-data](https://gillescolling.com/specvec/articles/specvec-benchmark.html)
+data](https://gcol33.github.io/specvec/articles/specvec-benchmark.html)
 runs the workflow on simulated plots and shows how to map an EVA export
 onto `specvec()`.
 
@@ -186,44 +186,44 @@ recovery and link prediction by more than two pooled standard
 deviations. On EVA samples of 10,000 and 200,000 plots this selects
 `abund_pmi`, and its lead over correspondence analysis is larger in the
 bigger sample. [Methods: from plots to
-embeddings](https://gillescolling.com/specvec/articles/specvec-methods.html)
+embeddings](https://gcol33.github.io/specvec/articles/specvec-methods.html)
 describes each method.
 
 A method is a registered pair of a weighting and a factorization, so a
 new method is added with `register_weighting()`,
 `register_factorization()` or `register_method()`, as [Extending
 specvec: weightings, factorizations,
-methods](https://gillescolling.com/specvec/articles/specvec-extending.html)
+methods](https://gcol33.github.io/specvec/articles/specvec-extending.html)
 shows.
 
 ## Documentation
 
 Start with [Getting started with
-specvec](https://gillescolling.com/specvec/articles/specvec-quickstart.html):
+specvec](https://gcol33.github.io/specvec/articles/specvec-quickstart.html):
 from a long plot table to species neighbours and plot vectors.
 
 - [Preparing data and cover
-  scales](https://gillescolling.com/specvec/articles/specvec-data.html):
+  scales](https://gcol33.github.io/specvec/articles/specvec-data.html):
   the input table, cover scales and duplicate records.
 - [Methods: from plots to
-  embeddings](https://gillescolling.com/specvec/articles/specvec-methods.html):
+  embeddings](https://gcol33.github.io/specvec/articles/specvec-methods.html):
   what each weighting and factorization computes.
 - [Community embeddings and
-  novelty](https://gillescolling.com/specvec/articles/specvec-communities.html):
+  novelty](https://gcol33.github.io/specvec/articles/specvec-communities.html):
   comparing plots and scoring how unusual a plot is.
 - [Compare embedding methods on your own
-  data](https://gillescolling.com/specvec/articles/specvec-benchmark.html):
+  data](https://gcol33.github.io/specvec/articles/specvec-benchmark.html):
   the benchmark protocol and its verdict.
 - [Tracking species and communities through
-  time](https://gillescolling.com/specvec/articles/specvec-temporal.html):
+  time](https://gcol33.github.io/specvec/articles/specvec-temporal.html):
   embeddings per time window in one fixed frame.
 - [Alien integration
-  trajectories](https://gillescolling.com/specvec/articles/specvec-integration.html):
+  trajectories](https://gcol33.github.io/specvec/articles/specvec-integration.html):
   a neophyte’s distance to the native community over time.
 - [Extending specvec: weightings, factorizations,
-  methods](https://gillescolling.com/specvec/articles/specvec-extending.html):
+  methods](https://gcol33.github.io/specvec/articles/specvec-extending.html):
   registering a new method.
-- [Full reference](https://gillescolling.com/specvec/reference/): every
+- [Full reference](https://gcol33.github.io/specvec/reference/): every
   function, grouped by job.
 
 ## Getting help
@@ -272,5 +272,5 @@ BibTeX:
 ```
 
 Download the citation as
-[BibTeX](https://gillescolling.com/specvec/specvec.bib) or
-[RIS](https://gillescolling.com/specvec/specvec.ris).
+[BibTeX](https://gcol33.github.io/specvec/specvec.bib) or
+[RIS](https://gcol33.github.io/specvec/specvec.ris).
